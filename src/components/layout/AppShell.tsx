@@ -1,22 +1,25 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { getPageTitle } from '../../router/routes'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
 type AppShellProps = {
-  path: string
-  title: string
-  children: ReactNode
+  path?: string
+  title?: string
+  children?: ReactNode
 }
 
 export function AppShell({ path, title, children }: AppShellProps) {
+  const location = useLocation()
+  const currentPath = path ?? location.pathname
+  const currentTitle = title ?? getPageTitle(currentPath)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    const closeOnRouteChange = () => setSidebarOpen(false)
-    window.addEventListener('hashchange', closeOnRouteChange)
-    return () => window.removeEventListener('hashchange', closeOnRouteChange)
-  }, [])
+    setSidebarOpen(false)
+  }, [currentPath])
 
   useEffect(() => {
     document.body.classList.toggle('overflow-hidden', sidebarOpen)
@@ -48,7 +51,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
       </a>
 
       <Sidebar
-        path={path}
+        path={currentPath}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -67,7 +70,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
 
       <div className="flex min-h-screen min-w-0 flex-col">
         <Topbar
-          title={title}
+          title={currentTitle}
           menuOpen={sidebarOpen}
           onMenu={() => setSidebarOpen(true)}
         />
@@ -76,7 +79,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
           id="main-content"
           tabIndex={-1}
         >
-          {children}
+          {children ?? <Outlet />}
         </main>
       </div>
     </div>

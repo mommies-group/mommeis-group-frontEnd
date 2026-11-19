@@ -1,31 +1,36 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Icon, type IconName } from '../components/icons/Icon'
+import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
 import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
 import { buttonStyles } from '../components/ui/buttonStyles'
-import { Callout } from '../components/ui/Callout'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
+import { useDashboardSummary } from '../hooks/queries/dashboard/dashboard.queries'
+import { usePendingBookings } from '../hooks/queries/bookings/bookings.queries'
+import { formatDateTime } from '../lib/format'
 import { ROUTES } from '../router/routes'
 
 type SummaryCardProps = {
   label: string
   icon: IconName
+  value: ReactNode
   hint: string
   linkLabel: string
   href: string
-  widePlaceholder?: boolean
+  valueClassName?: string
 }
 
 function SummaryCard({
   label,
   icon,
+  value,
   hint,
   linkLabel,
   href,
-  widePlaceholder = false,
+  valueClassName = 'text-2xl',
 }: SummaryCardProps) {
   return (
     <article className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -35,83 +40,66 @@ function SummaryCard({
           <Icon name={icon} size={16} />
         </span>
       </div>
-      <div className="mt-3 flex h-8 items-center">
-        <Skeleton className={widePlaceholder ? 'h-8 w-28' : 'h-8 w-14'} />
-        <span className="sr-only">Value not available yet</span>
+      <div className="mt-3 flex min-h-8 items-center">
+        <span
+          className={`min-w-0 truncate font-bold tracking-tight text-slate-900 ${valueClassName}`}
+        >
+          {value}
+        </span>
       </div>
       <p className="mt-1 text-[11px] text-slate-500">{hint}</p>
-      <a
+      <Link
         className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 transition hover:text-teal-900"
-        href={`#${href}`}
+        to={href}
       >
         {linkLabel}
         <Icon name="arrow-right" size={12} />
-      </a>
+      </Link>
     </article>
   )
 }
 
-type QuickLinkProps = {
-  href: string
-  icon: IconName
-  title: string
-  copy: string
-}
-
-function QuickLink({ href, icon, title, copy }: QuickLinkProps) {
-  return (
-    <a
-      className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-teal-200 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-      href={`#${href}`}
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition group-hover:bg-teal-100 group-hover:text-teal-700">
-        <Icon name={icon} size={16} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold text-slate-800">
-          {title}
-        </span>
-        <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">
-          {copy}
-        </span>
-      </span>
-      <span className="shrink-0 text-slate-300 transition group-hover:text-teal-600">
-        <Icon name="chevron-right" size={15} />
-      </span>
-    </a>
-  )
-}
-
-function DashboardLabel({ children }: { children: ReactNode }) {
-  return <Badge tone="neutral">{children}</Badge>
-}
-
 export function DashboardPage() {
+  const summary = useDashboardSummary()
+  const pendingBookings = usePendingBookings()
+  const data = summary.data
+  const nextAppointment = data?.upcomingAppointments[0]
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Your clinical workspace at a glance. Summary values will populate when live portal data is connected."
+        description="Your clinical workspace at a glance, based on your current bookings, patients, notes, and activities."
         actions={
           <>
-            <a
+            <Link
               className={buttonStyles({ variant: 'secondary' })}
-              href={`#${ROUTES.bookings}`}
+              to={ROUTES.bookings}
             >
               <Icon name="calendar" size={15} />
               View schedule
-            </a>
-            <a
+            </Link>
+            <Link
               className={buttonStyles({ variant: 'primary' })}
-              href={`#${ROUTES.activities}`}
+              to={ROUTES.activities}
             >
               <Icon name="plus" size={15} />
               Create activity
-            </a>
+            </Link>
           </>
         }
       />
+
+      {summary.isError ? (
+        <ApiErrorNotice
+          error={summary.error}
+          title="Could not load your dashboard"
+          onRetry={() => {
+            void summary.refetch()
+          }}
+        />
+      ) : null}
 
       <section
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
@@ -120,31 +108,65 @@ export function DashboardPage() {
         <SummaryCard
           label="Today's sessions"
           icon="clock"
-          hint="Awaiting schedule data"
+          value={
+            summary.isLoading ? (
+              <Skeleton className="h-7 w-14" />
+            ) : (
+              (data?.todaySessions ?? '—')
+            )
+          }
+          hint="Confirmed sessions scheduled for today"
           linkLabel="Open schedule"
           href={ROUTES.bookings}
         />
         <SummaryCard
           label="Pending requests"
           icon="inbox"
-          hint="Awaiting booking data"
+          value={
+            summary.isLoading ? (
+              <Skeleton className="h-7 w-14" />
+            ) : (
+              (data?.pendingBookingRequests ?? '—')
+            )
+          }
+          hint="Requests awaiting a specialist decision"
           linkLabel="Review bookings"
           href={ROUTES.bookings}
         />
         <SummaryCard
           label="Assigned patients"
           icon="users"
-          hint="Awaiting patient data"
+          value={
+            summary.isLoading ? (
+              <Skeleton className="h-7 w-14" />
+            ) : (
+              (data?.activePatients ?? '—')
+            )
+          }
+          hint="Patients with consent and appointment access"
           linkLabel="View patients"
           href={ROUTES.patients}
         />
         <SummaryCard
           label="Next appointment"
           icon="calendar"
-          hint="Awaiting appointment data"
+          value={
+            summary.isLoading ? (
+              <Skeleton className="h-7 w-32" />
+            ) : nextAppointment ? (
+              formatDateTime(nextAppointment.scheduledAt)
+            ) : (
+              'None scheduled'
+            )
+          }
+          valueClassName="text-sm leading-5 whitespace-normal"
+          hint={
+            nextAppointment
+              ? `${nextAppointment.child.firstName} ${nextAppointment.child.lastName}`
+              : 'No upcoming appointment on your schedule'
+          }
           linkLabel="View schedule"
           href={ROUTES.bookings}
-          widePlaceholder
         />
       </section>
 
@@ -153,24 +175,77 @@ export function DashboardPage() {
           <Card>
             <CardHeader
               title="Upcoming appointments"
-              description="Sessions tied to active or recently completed appointments."
-              action={<Badge tone="neutral">No live data</Badge>}
+              description="The next sessions already scheduled in your calendar."
             />
             <CardBody>
-              <EmptyState
-                icon="calendar"
-                title="No upcoming appointments to display"
-                description="Upcoming sessions will appear here once appointment data is connected to the portal."
-                action={
-                  <a
-                    className={buttonStyles({ variant: 'secondary', size: 'sm' })}
-                    href={`#${ROUTES.bookings}`}
-                  >
-                    Go to Bookings & Schedule
-                    <Icon name="arrow-right" size={13} />
-                  </a>
-                }
-              />
+              {summary.isLoading ? (
+                <div className="grid gap-3" aria-label="Loading appointments">
+                  {[0, 1, 2].map((item) => (
+                    <div
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 p-3"
+                      key={item}
+                    >
+                      <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+                      <div className="grid flex-1 gap-2">
+                        <Skeleton className="h-3 w-40" />
+                        <Skeleton className="h-2.5 w-28" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : data && data.upcomingAppointments.length > 0 ? (
+                <div className="grid gap-2.5">
+                  {data.upcomingAppointments.map((appointment) => (
+                    <Link
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-teal-200 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                      to={ROUTES.bookings}
+                      key={appointment.id}
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                        <Icon name="calendar" size={17} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-800">
+                          {appointment.child.firstName}{' '}
+                          {appointment.child.lastName}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {formatDateTime(appointment.scheduledAt)}
+                        </p>
+                      </div>
+                      <Badge
+                        tone={
+                          appointment.status === 'CONFIRMED'
+                            ? 'success'
+                            : 'warning'
+                        }
+                      >
+                        {appointment.status === 'CONFIRMED'
+                          ? 'Confirmed'
+                          : 'Reschedule pending'}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon="calendar"
+                  title="No upcoming appointments"
+                  description="Scheduled sessions from the bookings API will appear here."
+                  action={
+                    <Link
+                      className={buttonStyles({
+                        variant: 'secondary',
+                        size: 'sm',
+                      })}
+                      to={ROUTES.bookings}
+                    >
+                      Go to Bookings & Schedule
+                      <Icon name="arrow-right" size={13} />
+                    </Link>
+                  }
+                />
+              )}
             </CardBody>
           </Card>
 
@@ -178,15 +253,44 @@ export function DashboardPage() {
             <CardHeader
               title="Today's sessions"
               description="A focused view of the current day."
-              action={<DashboardLabel>Preview</DashboardLabel>}
             />
             <CardBody>
-              <EmptyState
-                compact
-                icon="clock"
-                title="No session data available"
-                description="Today's appointments will appear here when live scheduling is connected."
-              />
+              {summary.isLoading ? (
+                <Skeleton className="h-16 w-full rounded-xl" />
+              ) : data && data.todaySessions > 0 ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-teal-200">
+                      <Icon name="clock" size={17} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {data.todaySessions} confirmed{' '}
+                        {data.todaySessions === 1 ? 'session' : 'sessions'} today
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        Open the schedule for appointment times and status.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    className={buttonStyles({
+                      variant: 'secondary',
+                      size: 'sm',
+                    })}
+                    to={ROUTES.bookings}
+                  >
+                    Open schedule
+                  </Link>
+                </div>
+              ) : (
+                <EmptyState
+                  compact
+                  icon="clock"
+                  title="No confirmed sessions today"
+                  description="Your schedule is clear for the current day."
+                />
+              )}
             </CardBody>
           </Card>
         </div>
@@ -197,89 +301,114 @@ export function DashboardPage() {
               title="Pending booking requests"
               description="Requests waiting for a specialist decision."
               action={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled
-                  title="No booking data is connected in this preview"
+                <Link
+                  className={buttonStyles({ variant: 'ghost', size: 'sm' })}
+                  to={ROUTES.bookings}
                 >
                   Review
-                </Button>
+                  <Icon name="arrow-right" size={12} />
+                </Link>
               }
             />
             <CardBody>
-              <EmptyState
-                compact
-                icon="inbox"
-                title="No requests to review"
-                description="New requests will appear here when the booking service is connected."
-              />
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="Quick navigation" />
-            <CardBody>
-              <div className="space-y-2">
-                <QuickLink
-                  href={ROUTES.patients}
-                  icon="users"
-                  title="My Patients"
-                  copy="Consent-verified patient list"
+              {pendingBookings.isLoading ? (
+                <div className="grid gap-2">
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </div>
+              ) : pendingBookings.isError ? (
+                <ApiErrorNotice
+                  error={pendingBookings.error}
+                  title="Could not load pending requests"
+                  onRetry={() => {
+                    void pendingBookings.refetch()
+                  }}
                 />
-                <QuickLink
-                  href={ROUTES.bookings}
-                  icon="calendar"
-                  title="Bookings & Schedule"
-                  copy="Requests and upcoming sessions"
+              ) : pendingBookings.data && pendingBookings.data.length > 0 ? (
+                <div className="grid gap-2">
+                  {pendingBookings.data.slice(0, 3).map((booking) => (
+                    <Link
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-amber-200 hover:bg-amber-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                      to={ROUTES.bookings}
+                      key={booking.id}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                        <Icon name="inbox" size={15} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-800">
+                          {booking.child.firstName} {booking.child.lastName}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                          Requested {formatDateTime(booking.requestedAt)}
+                        </p>
+                      </div>
+                      <Icon name="chevron-right" size={14} />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  compact
+                  icon="inbox"
+                  title="No pending requests"
+                  description="New requests will appear here for review."
                 />
-                <QuickLink
-                  href={ROUTES.activities}
-                  icon="activity"
-                  title="Create an activity"
-                  copy="Build a step-by-step care plan"
-                />
-              </div>
+              )}
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader
-              title="Care activity overview"
-              description="Assigned activities and parent confirmations."
-              action={<DashboardLabel>Preview</DashboardLabel>}
+              title="Recent workspace activity"
+              description="Latest notes and activities created for your patients."
             />
             <CardBody>
-              <EmptyState
-                compact
-                icon="activity"
-                title="No activity data available"
-                description="Completion status is shown only after the mother confirms completion."
-                action={
-                  <a
-                    className={buttonStyles({ variant: 'secondary', size: 'sm' })}
-                    href={`#${ROUTES.activities}`}
-                  >
-                    Open activity creator
-                    <Icon name="arrow-right" size={13} />
-                  </a>
-                }
-              />
+              {summary.isLoading ? (
+                <div className="grid gap-2">
+                  <Skeleton className="h-11 w-full rounded-lg" />
+                  <Skeleton className="h-11 w-full rounded-lg" />
+                  <Skeleton className="h-11 w-full rounded-lg" />
+                </div>
+              ) : data && data.recentActivities.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  {data.recentActivities.map((activity) => (
+                    <div
+                      className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
+                      key={`${activity.type}-${activity.id}`}
+                    >
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                        <Icon
+                          name={activity.type === 'NOTE' ? 'notes' : 'activity'}
+                          size={13}
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-slate-800">
+                          {activity.title}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          {activity.type === 'NOTE'
+                            ? 'Clinical note'
+                            : 'Assigned activity'}{' '}
+                          · {formatDateTime(activity.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  compact
+                  icon="activity"
+                  title="No recent activity"
+                  description="New notes and assigned activities will appear here."
+                />
+              )}
             </CardBody>
           </Card>
         </div>
       </div>
-
-      <Callout
-        tone="brand"
-        title="Clinical access follows consent, not navigation"
-        icon="shield"
-      >
-        Opening a page is not enough. A child&apos;s clinical record is available
-        only while active parental consent and an active or recently completed
-        appointment both apply. {' '}
-        <a href={`#${ROUTES.privacy}`}>Review the access rules</a>.
-      </Callout>
     </div>
   )
 }

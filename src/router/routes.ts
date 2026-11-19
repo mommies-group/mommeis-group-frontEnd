@@ -10,7 +10,6 @@ export const ROUTES = {
   patientRecord: '/patients/record',
   clinicalNotes: '/clinical-notes',
   activities: '/activities',
-  privacy: '/privacy',
 } as const
 
 export type NavItem = {
@@ -55,11 +54,6 @@ export const NAV_GROUPS: NavGroup[] = [
         path: ROUTES.profile,
         icon: 'id-card',
       },
-      {
-        label: 'Privacy & Consent',
-        path: ROUTES.privacy,
-        icon: 'shield',
-      },
     ],
   },
 ]
@@ -74,11 +68,22 @@ const titles: Record<string, string> = {
   [ROUTES.patientRecord]: 'Patient Clinical Record',
   [ROUTES.clinicalNotes]: 'Clinical Notes',
   [ROUTES.activities]: 'Activities',
-  [ROUTES.privacy]: 'Privacy & Consent',
 }
 
 export function getPageTitle(path: string): string {
   return titles[path] ?? 'Page not found'
+}
+
+export function patientRecordPath(childId: string): string {
+  return `${ROUTES.patientRecord}?childId=${encodeURIComponent(childId)}`
+}
+
+export function clinicalNotesPath(childId?: string): string {
+  if (!childId) {
+    return ROUTES.clinicalNotes
+  }
+
+  return `${ROUTES.clinicalNotes}?childId=${encodeURIComponent(childId)}`
 }
 
 export function isNavActive(itemPath: string, currentPath: string): boolean {

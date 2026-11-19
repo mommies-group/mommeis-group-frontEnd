@@ -1,27 +1,82 @@
-import { useState } from 'react'
-import type { ChangeEvent, FormEvent } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
+import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { buttonStyles } from '../components/ui/buttonStyles'
-import { Callout } from '../components/ui/Callout'
-import { Card, CardBody, CardFooter, CardHeader } from '../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
-import { Field, Input, Select } from '../components/ui/Field'
+import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { InlineNotice } from '../components/ui/InlineNotice'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Skeleton } from '../components/ui/Skeleton'
+import {
+  useCreateActivity,
+  useRetractActivity,
+  useUpdateActivity,
+} from '../hooks/mutations/activities/activities.mutations'
+import { useActivities } from '../hooks/queries/activities/activities.queries'
+import { usePatients } from '../hooks/queries/patients/patients.queries'
+import { getApiErrorMessage } from '../lib/api-error'
+import {
+  formatDate,
+  toDateInputValue,
+  toDueDateIso,
+} from '../lib/format'
+import type { Activity } from '../types/activity.types'
 import { ROUTES } from '../router/routes'
 
+type EditForm = {
+  title: string
+  instructions: string
+  mediaReference: string
+  duration: string
+  frequency: string
+  dueDate: string
+}
+
+const emptyEditForm: EditForm = {
+  title: '',
+  instructions: '',
+  mediaReference: '',
+  duration: '',
+  frequency: '',
+  dueDate: '',
+}
+
 export function ActivitiesPage() {
-  const [patient, setPatient] = useState('')
+  const [searchParams] = useSearchParams()
+  const initialChildId = searchParams.get('childId') ?? ''
+  const [patientId, setPatientId] = useState(initialChildId)
+
+  useEffect(() => {
+    const childId = searchParams.get('childId')
+    if (childId) {
+      setPatientId(childId)
+    }
+  }, [searchParams])
   const [title, setTitle] = useState('')
   const [steps, setSteps] = useState<string[]>([''])
-  const [mediaName, setMediaName] = useState('')
+  const [mediaReference, setMediaReference] = useState('')
   const [duration, setDuration] = useState('')
   const [frequency, setFrequency] = useState('')
   const [dueDate, setDueDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [notice, setNotice] = useState('')
+  const [formError, setFormError] = useState('')
+
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>(emptyEditForm)
+  const [editNotice, setEditNotice] = useState('')
+  const [editError, setEditError] = useState('')
+  const [retractingId, setRetractingId] = useState<string | null>(null)
+
+  const patients = usePatients()
+  const activities = useActivities()
+  const createActivity = useCreateActivity()
+  const updateActivity = useUpdateActivity()
+  const retractActivity = useRetractActivity()
 
   const updateStep = (index: number, value: string) => {
     setSteps((current) =>
@@ -42,30 +97,166 @@ export function ActivitiesPage() {
     })
   }
 
-  const handleMediaChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setMediaName(file.name)
-    }
-  }
-
   const clearForm = () => {
-    setPatient('')
+    setPatientId('')
     setTitle('')
     setSteps([''])
-    setMediaName('')
+    setMediaReference('')
     setDuration('')
     setFrequency('')
     setDueDate('')
-    setEndDate('')
     setNotice('')
+    setFormError('')
+    createActivity.reset()
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setNotice(
-      'Preview only — this activity was not created. Creation will be connected to the activities API later.',
+    setNotice('')
+    setFormError('')
+    createActivity.reset()
+
+    const instructions = steps
+      .map((step) => step.trim())
+      .filter(Boolean)
+      .join('\n')
+    const durationMinutes = Number(duration)
+
+    if (!patientId) {
+      setFormError('Choose an eligible patient for this activity.')
+      return
+    }
+
+    if (!title.trim() || !instructions) {
+      setFormError('Add an activity title and at least one instruction step.')
+      return
+    }
+
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
+      setFormError('Enter an estimated duration of at least 1 minute.')
+      return
+    }
+
+    if (!frequency.trim()) {
+      setFormError('Describe how often the family should complete the activity.')
+      return
+    }
+
+    createActivity.mutate(
+      {
+        childId: patientId,
+        payload: {
+          title: title.trim(),
+          instructions,
+          mediaReference: mediaReference.trim() || null,
+          durationMinutes,
+          frequency: frequency.trim(),
+          dueDate: toDueDateIso(dueDate),
+        },
+      },
+      {
+        onSuccess: () => {
+          setTitle('')
+          setSteps([''])
+          setMediaReference('')
+          setDuration('')
+          setFrequency('')
+          setDueDate('')
+          setNotice('Activity created and assigned to the selected patient.')
+        },
+      },
     )
+  }
+
+  const startEditing = (activity: Activity) => {
+    setEditingActivity(activity)
+    setEditForm({
+      title: activity.title,
+      instructions: activity.instructions,
+      mediaReference: activity.mediaReference ?? '',
+      duration: String(activity.durationMinutes),
+      frequency: activity.frequency,
+      dueDate: toDateInputValue(activity.dueDate),
+    })
+    setEditNotice('')
+    setEditError('')
+    updateActivity.reset()
+    document
+      .getElementById('edit-activity-card')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setEditNotice('')
+    setEditError('')
+    updateActivity.reset()
+
+    if (!editingActivity) {
+      return
+    }
+
+    const durationMinutes = Number(editForm.duration)
+
+    if (
+      !editForm.title.trim() ||
+      !editForm.instructions.trim() ||
+      !editForm.frequency.trim() ||
+      !Number.isInteger(durationMinutes) ||
+      durationMinutes < 1
+    ) {
+      setEditError(
+        'Title, instructions, duration, and frequency are required.',
+      )
+      return
+    }
+
+    updateActivity.mutate(
+      {
+        id: editingActivity.id,
+        payload: {
+          title: editForm.title.trim(),
+          instructions: editForm.instructions.trim(),
+          mediaReference: editForm.mediaReference.trim() || null,
+          durationMinutes,
+          frequency: editForm.frequency.trim(),
+          dueDate: toDueDateIso(editForm.dueDate),
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditingActivity(null)
+          setEditForm(emptyEditForm)
+          setNotice('Activity updated.')
+        },
+      },
+    )
+  }
+
+  const handleRetract = (activityId: string) => {
+    if (retractingId !== activityId) {
+      setRetractingId(activityId)
+      return
+    }
+
+    setNotice('')
+    setEditError('')
+    retractActivity.mutate(activityId, {
+      onSuccess: () => {
+        setRetractingId(null)
+        if (editingActivity?.id === activityId) {
+          setEditingActivity(null)
+          setEditForm(emptyEditForm)
+        }
+        setNotice('Activity retracted. It is no longer shown in the active list.')
+      },
+    })
+  }
+
+  const updateEditField = (field: keyof EditForm, value: string) => {
+    setEditForm((current) => ({ ...current, [field]: value }))
+    setEditError('')
+    updateActivity.reset()
   }
 
   return (
@@ -75,32 +266,36 @@ export function ActivitiesPage() {
         title="Activities"
         description="Create a personalised therapeutic activity for an eligible patient. Completion becomes visible only after the mother confirms it."
         actions={
-          <a
+          <Link
             className={buttonStyles({ variant: 'secondary' })}
-            href={`#${ROUTES.patients}`}
+            to={ROUTES.patients}
           >
             <Icon name="users" size={15} />
             View patients
-          </a>
+          </Link>
         }
       />
 
-      <Callout
-        tone="brand"
-        title="Assigned activities require an eligible patient"
-        icon="shield"
-      >
-        Only children with active consent for your specialist–child relationship
-        and an active or recently completed appointment are eligible. This
-        preview does not load patient records.
-      </Callout>
+      {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
+
+      {retractActivity.isError ? (
+        <InlineNotice tone="danger">
+          {getApiErrorMessage(retractActivity.error)}
+        </InlineNotice>
+      ) : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
         <Card>
           <CardHeader
             title="Create an activity"
             description="Write clear, step-by-step instructions for the family."
-            action={<Badge tone="warning">Local preview</Badge>}
+            action={
+              createActivity.isPending ? (
+                <Badge tone="info" dot>
+                  Saving
+                </Badge>
+              ) : null
+            }
           />
 
           <form onSubmit={handleSubmit}>
@@ -118,16 +313,37 @@ export function ActivitiesPage() {
                   <Field
                     label="Patient"
                     htmlFor="activity-patient"
-                    hint="No eligible patients are available in this preview."
+                    hint={
+                      patients.data
+                        ? `${patients.data.length} eligible ${
+                            patients.data.length === 1 ? 'patient' : 'patients'
+                          } available.`
+                        : 'Loading eligible patients.'
+                    }
                   >
                     <Select
                       id="activity-patient"
-                      value={patient}
-                      onChange={(event) => setPatient(event.target.value)}
+                      value={patientId}
+                      disabled={patients.isLoading || createActivity.isPending}
+                      onChange={(event) => setPatientId(event.target.value)}
                     >
                       <option value="">Select an eligible patient</option>
+                      {patients.data?.map((patient) => (
+                        <option value={patient.id} key={patient.id}>
+                          {patient.firstName} {patient.lastName}
+                        </option>
+                      ))}
                     </Select>
                   </Field>
+                  {patients.isError ? (
+                    <ApiErrorNotice
+                      error={patients.error}
+                      title="Could not load patients"
+                      onRetry={() => {
+                        void patients.refetch()
+                      }}
+                    />
+                  ) : null}
                 </div>
 
                 <div className="grid gap-4 border-b border-slate-100 pb-6">
@@ -145,6 +361,7 @@ export function ActivitiesPage() {
                     <Input
                       id="activity-title"
                       value={title}
+                      disabled={createActivity.isPending}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder="Give the activity a clear title"
                     />
@@ -171,6 +388,7 @@ export function ActivitiesPage() {
                               value={step}
                               aria-label={`Instruction step ${index + 1}`}
                               placeholder={`Describe step ${index + 1}`}
+                              disabled={createActivity.isPending}
                               onChange={(event) =>
                                 updateStep(index, event.target.value)
                               }
@@ -180,7 +398,7 @@ export function ActivitiesPage() {
                             type="button"
                             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500"
                             aria-label={`Remove step ${index + 1}`}
-                            disabled={steps.length === 1}
+                            disabled={steps.length === 1 || createActivity.isPending}
                             onClick={() => removeStep(index)}
                           >
                             <Icon name="trash" size={14} />
@@ -189,44 +407,32 @@ export function ActivitiesPage() {
                       ))}
                     </div>
                     <div className="mt-1 flex">
-                      <Button variant="ghost" size="sm" onClick={addStep}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={addStep}
+                        disabled={createActivity.isPending}
+                      >
                         <Icon name="plus" size={13} />
                         Add step
                       </Button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 text-center">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-500 ring-1 ring-slate-200">
-                      <Icon name="upload" size={17} />
-                    </span>
-                    <p className="mt-2 text-xs font-semibold text-slate-800">
-                      Media attachment{' '}
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
-                        Optional
-                      </span>
-                    </p>
-                    <p className="mt-1 max-w-md text-[11px] leading-4 text-slate-500">
-                      Add an image or PDF to support the instructions. Files are
-                      not uploaded in this static preview.
-                    </p>
-                    <label className="mt-3 inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus-within:ring-2 focus-within:ring-teal-600 focus-within:ring-offset-2">
-                      <Icon name="file" size={13} />
-                      Choose file
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        className="sr-only"
-                        onChange={handleMediaChange}
-                      />
-                    </label>
-                    {mediaName ? (
-                      <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-slate-500">
-                        <Icon name="file" size={11} />
-                        {mediaName} (not uploaded)
-                      </span>
-                    ) : null}
-                  </div>
+                  <Field
+                    label="Media reference"
+                    htmlFor="activity-media"
+                    optional
+                    hint="Enter a filename or URL reference. The API does not expose a file-upload endpoint."
+                  >
+                    <Input
+                      id="activity-media"
+                      value={mediaReference}
+                      disabled={createActivity.isPending}
+                      onChange={(event) => setMediaReference(event.target.value)}
+                      placeholder="e.g. emotion-cards.pdf"
+                    />
+                  </Field>
                 </div>
 
                 <div className="grid gap-4">
@@ -251,6 +457,7 @@ export function ActivitiesPage() {
                           type="number"
                           min={1}
                           value={duration}
+                          disabled={createActivity.isPending}
                           onChange={(event) => setDuration(event.target.value)}
                           placeholder="—"
                           className="pr-9"
@@ -267,50 +474,69 @@ export function ActivitiesPage() {
                       <Input
                         id="activity-frequency"
                         value={frequency}
+                        disabled={createActivity.isPending}
                         onChange={(event) => setFrequency(event.target.value)}
                         placeholder="e.g. once daily for two weeks"
                       />
                     </Field>
-                    <Field label="Due date" htmlFor="activity-due-date">
+                    <Field label="Due date" htmlFor="activity-due-date" optional>
                       <Input
                         id="activity-due-date"
                         type="date"
                         value={dueDate}
+                        disabled={createActivity.isPending}
                         onChange={(event) => setDueDate(event.target.value)}
-                      />
-                    </Field>
-                    <Field
-                      label="End date"
-                      htmlFor="activity-end-date"
-                      optional
-                    >
-                      <Input
-                        id="activity-end-date"
-                        type="date"
-                        value={endDate}
-                        onChange={(event) => setEndDate(event.target.value)}
                       />
                     </Field>
                   </div>
                 </div>
 
-                {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+                {formError ? (
+                  <InlineNotice tone="warning">{formError}</InlineNotice>
+                ) : null}
+
+                {createActivity.isError ? (
+                  <InlineNotice tone="danger">
+                    {getApiErrorMessage(createActivity.error)}
+                  </InlineNotice>
+                ) : null}
               </div>
             </CardBody>
 
             <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/60 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <Icon name="info" size={13} />
-                Visual control only — no activity is created.
+                <Icon name="clock" size={13} />
+                Completion is recorded only after the mother confirms it.
               </p>
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="ghost" onClick={clearForm}>
+                <Button
+                  variant="ghost"
+                  onClick={clearForm}
+                  disabled={createActivity.isPending}
+                >
                   <Icon name="trash" size={14} />
                   Clear form
                 </Button>
-                <Button type="submit" variant="primary">
-                  <Icon name="check" size={14} />
-                  Save activity
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={createActivity.isPending}
+                  aria-busy={createActivity.isPending}
+                >
+                  {createActivity.isPending ? (
+                    <>
+                      <span
+                        className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"
+                        aria-hidden="true"
+                      />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="check" size={14} />
+                      Save activity
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -322,103 +548,294 @@ export function ActivitiesPage() {
             <CardHeader
               title="Assigned activities"
               description="Activities you have assigned to eligible patients."
-              action={<Badge tone="neutral">No live data</Badge>}
+              action={
+                activities.data ? (
+                  <Badge tone="neutral">
+                    {activities.data.length} total
+                  </Badge>
+                ) : null
+              }
             />
             <CardBody>
-              <EmptyState
-                compact
-                icon="activity"
-                title="No activities assigned"
-                description="Created activities will appear here when the activities service is connected."
-              />
-            </CardBody>
-            <CardFooter>
-              <p className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <Icon name="clock" size={13} />
-                Completion status is visible only after the mother confirms it.
-              </p>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Activity controls"
-              description="Edit and retract remain available for each assigned activity."
-              action={<Badge tone="info">UI preview</Badge>}
-            />
-            <CardBody>
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-800">
-                      Assigned activity actions
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
-                      Actions appear per activity once live data is loaded.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled
-                      title="Available when an assigned activity is loaded"
-                    >
-                      <Icon name="edit" size={12} />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled
-                      title="Available when an assigned activity is loaded"
-                    >
-                      <Icon name="trash" size={12} />
-                      Retract
-                    </Button>
-                  </div>
+              {activities.isLoading ? (
+                <div className="grid gap-2">
+                  <Skeleton className="h-20 w-full rounded-xl" />
+                  <Skeleton className="h-20 w-full rounded-xl" />
                 </div>
-              </div>
+              ) : activities.isError ? (
+                <ApiErrorNotice
+                  error={activities.error}
+                  title="Could not load activities"
+                  onRetry={() => {
+                    void activities.refetch()
+                  }}
+                />
+              ) : activities.data && activities.data.length > 0 ? (
+                <div className="grid gap-3">
+                  {activities.data.map((activity) => (
+                    <article
+                      className="rounded-xl border border-slate-200 bg-slate-50/50 p-3"
+                      key={activity.id}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-900">
+                            {activity.title}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-slate-500">
+                            {activity.child
+                              ? `${activity.child.firstName} ${activity.child.lastName}`
+                              : 'Patient activity'}
+                          </p>
+                        </div>
+                        <Badge tone={activity.completed ? 'success' : 'warning'}>
+                          {activity.completed
+                            ? 'Parent confirmed'
+                            : 'Awaiting confirmation'}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-[11px] leading-4 text-slate-600">
+                        {activity.instructions}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                        <span>{activity.durationMinutes} min</span>
+                        <span>{activity.frequency}</span>
+                        <span>Due {formatDate(activity.dueDate)}</span>
+                        {activity.mediaReference ? (
+                          <span className="truncate">
+                            Media: {activity.mediaReference}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {retractingId === activity.id ? (
+                        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-2.5">
+                          <p className="text-[10px] leading-4 text-rose-900">
+                            Retracting removes this activity from the active
+                            list. Confirm to continue.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              disabled={retractActivity.isPending}
+                              onClick={() => handleRetract(activity.id)}
+                            >
+                              <Icon name="trash" size={12} />
+                              Confirm retract
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={retractActivity.isPending}
+                              onClick={() => setRetractingId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => startEditing(activity)}
+                          >
+                            <Icon name="edit" size={12} />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setRetractingId(activity.id)}
+                          >
+                            <Icon name="trash" size={12} />
+                            Retract
+                          </Button>
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  compact
+                  icon="activity"
+                  title="No activities assigned"
+                  description="Activities you create for eligible patients will appear here."
+                />
+              )}
             </CardBody>
           </Card>
-
-          <Callout tone="warning" title="Completion visibility" icon="clock">
-            The specialist sees completion only after the mother confirms it.
-            Do not show an activity as complete before that confirmation.
-          </Callout>
 
           <Card>
-            <CardHeader title="Activity guidance" />
-            <CardBody>
-              <div className="grid gap-3">
-                <p className="flex gap-2.5 text-xs leading-5 text-slate-600">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
-                    <Icon name="activity" size={14} />
-                  </span>
-                  <span>
-                    Activities are written instructions with optional media,
-                    duration, repetition, and dates.
-                  </span>
-                </p>
-                <p className="flex gap-2.5 text-xs leading-5 text-slate-600">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
-                    <Icon name="edit" size={14} />
-                  </span>
-                  <span>
-                    Edit or retract an activity after assignment when needed.
-                  </span>
-                </p>
-                <p className="flex gap-2.5 text-xs leading-5 text-slate-600">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
-                    <Icon name="sparkles" size={14} />
-                  </span>
-                  <span>
-                    This portal does not generate AI activity recommendations.
-                  </span>
-                </p>
-              </div>
-            </CardBody>
+            <div id="edit-activity-card">
+              <CardHeader
+                title="Edit activity"
+                description="Update an assigned activity or retract it from the list."
+                action={
+                  editingActivity ? (
+                    <Badge tone="info">Editing</Badge>
+                  ) : (
+                    <Badge tone="neutral">No activity selected</Badge>
+                  )
+                }
+              />
+              <CardBody>
+                {editingActivity ? (
+                  <form className="grid gap-4" onSubmit={handleUpdate}>
+                    <Field label="Activity title" htmlFor="edit-activity-title">
+                      <Input
+                        id="edit-activity-title"
+                        value={editForm.title}
+                        disabled={updateActivity.isPending}
+                        onChange={(event) =>
+                          updateEditField('title', event.target.value)
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Instructions"
+                      htmlFor="edit-activity-instructions"
+                      hint="One instruction per line is preserved in the note view."
+                    >
+                      <Textarea
+                        id="edit-activity-instructions"
+                        value={editForm.instructions}
+                        disabled={updateActivity.isPending}
+                        onChange={(event) =>
+                          updateEditField('instructions', event.target.value)
+                        }
+                        rows={4}
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field
+                        label="Duration"
+                        htmlFor="edit-activity-duration"
+                      >
+                        <Input
+                          id="edit-activity-duration"
+                          type="number"
+                          min={1}
+                          value={editForm.duration}
+                          disabled={updateActivity.isPending}
+                          onChange={(event) =>
+                            updateEditField('duration', event.target.value)
+                          }
+                        />
+                      </Field>
+                      <Field
+                        label="Frequency"
+                        htmlFor="edit-activity-frequency"
+                      >
+                        <Input
+                          id="edit-activity-frequency"
+                          value={editForm.frequency}
+                          disabled={updateActivity.isPending}
+                          onChange={(event) =>
+                            updateEditField('frequency', event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field
+                        label="Due date"
+                        htmlFor="edit-activity-due"
+                        optional
+                      >
+                        <Input
+                          id="edit-activity-due"
+                          type="date"
+                          value={editForm.dueDate}
+                          disabled={updateActivity.isPending}
+                          onChange={(event) =>
+                            updateEditField('dueDate', event.target.value)
+                          }
+                        />
+                      </Field>
+                      <Field
+                        label="Media reference"
+                        htmlFor="edit-activity-media"
+                        optional
+                      >
+                        <Input
+                          id="edit-activity-media"
+                          value={editForm.mediaReference}
+                          disabled={updateActivity.isPending}
+                          onChange={(event) =>
+                            updateEditField('mediaReference', event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+
+                    {editNotice ? (
+                      <InlineNotice tone="success">{editNotice}</InlineNotice>
+                    ) : null}
+
+                    {editError ? (
+                      <InlineNotice tone="warning">{editError}</InlineNotice>
+                    ) : null}
+
+                    {updateActivity.isError ? (
+                      <InlineNotice tone="danger">
+                        {getApiErrorMessage(updateActivity.error)}
+                      </InlineNotice>
+                    ) : null}
+
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        disabled={updateActivity.isPending}
+                        onClick={() => {
+                          setEditingActivity(null)
+                          setEditForm(emptyEditForm)
+                          setEditError('')
+                          updateActivity.reset()
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={updateActivity.isPending}
+                        aria-busy={updateActivity.isPending}
+                      >
+                        {updateActivity.isPending ? (
+                          <>
+                            <span
+                              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"
+                              aria-hidden="true"
+                            />
+                            Saving…
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="check" size={14} />
+                            Save changes
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <p className="text-xs font-semibold text-slate-800">
+                      Select an activity to edit
+                    </p>
+                    <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                      Use the Edit button on an assigned activity. Completion is
+                      never changed from this portal.
+                    </p>
+                  </div>
+                )}
+              </CardBody>
+            </div>
           </Card>
+
         </div>
       </div>
     </div>

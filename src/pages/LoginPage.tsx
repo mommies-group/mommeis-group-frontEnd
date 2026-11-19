@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
 import { Button } from '../components/ui/Button'
-import { Callout } from '../components/ui/Callout'
 import { Field, Input } from '../components/ui/Field'
+import { InlineNotice } from '../components/ui/InlineNotice'
 import { Logo } from '../components/ui/Logo'
-import { navigate } from '../router/useHashRoute'
+import { useLogin } from '../hooks/mutations/auth/auth.mutations'
+import { getApiErrorMessage } from '../lib/api-error'
 import { ROUTES } from '../router/routes'
 
 const brandPoints = [
@@ -24,14 +26,29 @@ const brandPoints = [
 ]
 
 export function LoginPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [formError, setFormError] = useState('')
+  const loginMutation = useLogin()
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    // Static preview only: credentials are not validated and no session is created.
-    navigate(ROUTES.dashboard)
+    setFormError('')
+    loginMutation.reset()
+
+    if (!email.trim() || !password) {
+      setFormError('Enter your specialist email address and password.')
+      return
+    }
+
+    loginMutation.mutate(
+      { email: email.trim(), password },
+      {
+        onSuccess: () => navigate(ROUTES.dashboard, { replace: true }),
+      },
+    )
   }
 
   return (
@@ -81,9 +98,9 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/10 pt-6 text-[10px] font-medium uppercase tracking-[0.12em] text-teal-100/60">
+          <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/10 pt-6 text-[10px] font-medium uppercase tracking-[0.12em] text-teal-100/80">
             <span>MindBloom Specialist Portal</span>
-            <span>Static UI preview</span>
+            <span>Secure specialist access</span>
           </div>
         </div>
       </section>
@@ -119,7 +136,13 @@ export function LoginPage() {
                 autoComplete="email"
                 placeholder="you@organisation.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                required
+                disabled={loginMutation.isPending}
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setFormError('')
+                  loginMutation.reset()
+                }}
               />
             </Field>
 
@@ -132,7 +155,13 @@ export function LoginPage() {
                   autoComplete="current-password"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  disabled={loginMutation.isPending}
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    setFormError('')
+                    loginMutation.reset()
+                  }}
                   className="pr-11"
                 />
                 <button
@@ -140,6 +169,7 @@ export function LoginPage() {
                   className="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   aria-pressed={showPassword}
+                  disabled={loginMutation.isPending}
                   onClick={() => setShowPassword((current) => !current)}
                 >
                   <Icon
@@ -150,21 +180,40 @@ export function LoginPage() {
               </span>
             </Field>
 
-            <Button type="submit" variant="primary" size="lg" block>
-              Sign in
-              <Icon name="arrow-right" size={16} />
+            {formError ? (
+              <InlineNotice tone="warning">{formError}</InlineNotice>
+            ) : null}
+
+            {loginMutation.isError ? (
+              <InlineNotice tone="danger">
+                {getApiErrorMessage(loginMutation.error)}
+              </InlineNotice>
+            ) : null}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              block
+              disabled={loginMutation.isPending}
+              aria-busy={loginMutation.isPending}
+            >
+              {loginMutation.isPending ? (
+                <>
+                  <span
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+                    aria-hidden="true"
+                  />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <Icon name="arrow-right" size={16} />
+                </>
+              )}
             </Button>
           </form>
-
-          <Callout
-            tone="neutral"
-            title="Static UI preview"
-            icon="info"
-            className="mt-6"
-          >
-            Authentication is not connected. Signing in opens the dashboard
-            preview without validating credentials or creating a session.
-          </Callout>
 
           <p className="mt-5 text-[10px] leading-4 text-slate-500">
             Access to clinical information is limited to authorised

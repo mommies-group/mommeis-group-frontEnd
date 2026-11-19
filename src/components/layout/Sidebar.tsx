@@ -1,6 +1,11 @@
+import { Link } from 'react-router-dom'
+import { useLogout } from '../../hooks/mutations/auth/auth.mutations'
+import { useCurrentUser } from '../../hooks/queries/auth/auth.queries'
+import { NAV_GROUPS, ROUTES, isNavActive } from '../../router/routes'
 import { Icon } from '../icons/Icon'
+import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
-import { NAV_GROUPS, isNavActive } from '../../router/routes'
+import { Skeleton } from '../ui/Skeleton'
 
 type SidebarProps = {
   path: string
@@ -9,6 +14,14 @@ type SidebarProps = {
 }
 
 export function Sidebar({ path, open, onClose }: SidebarProps) {
+  const currentUser = useCurrentUser()
+  const logout = useLogout()
+
+  const handleSignOut = () => {
+    onClose()
+    logout()
+  }
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-50 flex w-[min(300px,86vw)] flex-col border-r border-slate-200 bg-white shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none ${
@@ -18,14 +31,14 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
     >
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 lg:h-[68px]">
-          <a
-            href="#/dashboard"
+          <Link
+            to={ROUTES.dashboard}
             onClick={onClose}
             className="min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
-            aria-label="MindBloom Specialist Portal dashboard"
+            title="MindBloom Specialist Portal dashboard"
           >
             <Logo />
-          </a>
+          </Link>
           <button
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 lg:hidden"
@@ -49,9 +62,9 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
                 {group.items.map((item) => {
                   const active = isNavActive(item.path, path)
                   return (
-                    <a
+                    <Link
                       key={item.path}
-                      href={`#${item.path}`}
+                      to={item.path}
                       className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 ${
                         active
                           ? 'bg-teal-50 text-teal-900 ring-1 ring-teal-100'
@@ -68,7 +81,7 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
                         <Icon name={item.icon} size={17} />
                       </span>
                       {item.label}
-                    </a>
+                    </Link>
                   )
                 })}
               </div>
@@ -77,30 +90,39 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
         </nav>
 
         <div className="shrink-0 border-t border-slate-200 p-3">
-          <div className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-900">
-              <Icon name="shield" size={14} />
-              Consent-aware access
-            </p>
-            <p className="mt-1.5 text-[10px] leading-4 text-teal-900/70">
-              Clinical records require both active consent and an active or
-              recently completed appointment.
-            </p>
-            <a
-              className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-teal-800 hover:text-teal-950"
-              href="#/privacy"
-              onClick={onClose}
+          <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+            <Avatar size="sm" label="Signed-in specialist" />
+            <div className="min-w-0 flex-1">
+              {currentUser.isLoading ? (
+                <div className="grid gap-1.5">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-2.5 w-20" />
+                </div>
+              ) : (
+                <>
+                  <p className="truncate text-xs font-semibold text-slate-800">
+                    {currentUser.data?.fullName ?? 'Specialist account'}
+                  </p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                    {currentUser.data?.specialty ?? 'MindBloom Specialist'}
+                  </p>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={handleSignOut}
             >
-              Review access rules
-              <Icon name="arrow-right" size={12} />
-            </a>
+              <Icon name="logout" size={15} />
+            </button>
           </div>
+
           <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-emerald-500"
-              aria-hidden="true"
-            />
-            Static UI preview — no live data
+            <Icon name="shield" size={11} />
+            Specialist workspace
           </p>
         </div>
       </div>

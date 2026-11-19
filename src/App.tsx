@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
+import { useAuthToken } from './lib/auth-token'
 import { ActivitiesPage } from './pages/ActivitiesPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { BookingsPage } from './pages/BookingsPage'
@@ -9,55 +11,61 @@ import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PatientRecordPage } from './pages/PatientRecordPage'
 import { PatientsPage } from './pages/PatientsPage'
-import { PrivacyConsentPage } from './pages/PrivacyConsentPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ROUTES, getPageTitle } from './router/routes'
-import { useHashRoute } from './router/useHashRoute'
 
-function getPage(path: string) {
-  switch (path) {
-    case ROUTES.dashboard:
-      return <DashboardPage />
-    case ROUTES.profile:
-      return <ProfilePage />
-    case ROUTES.availability:
-      return <AvailabilityPage />
-    case ROUTES.bookings:
-      return <BookingsPage />
-    case ROUTES.patients:
-      return <PatientsPage />
-    case ROUTES.patientRecord:
-      return <PatientRecordPage />
-    case ROUTES.clinicalNotes:
-      return <ClinicalNotesPage />
-    case ROUTES.activities:
-      return <ActivitiesPage />
-    case ROUTES.privacy:
-      return <PrivacyConsentPage />
-    default:
-      return <NotFoundPage />
+function DocumentTitleUpdater() {
+  const location = useLocation()
+
+  useEffect(() => {
+    document.title = `${getPageTitle(location.pathname)} · MindBloom Specialist Portal`
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+
+  return null
+}
+
+function LoginRoute() {
+  const token = useAuthToken()
+
+  if (token) {
+    return <Navigate to={ROUTES.dashboard} replace />
   }
+
+  return <LoginPage />
+}
+
+function ProtectedLayout() {
+  const token = useAuthToken()
+
+  if (!token) {
+    return <Navigate to={ROUTES.login} replace />
+  }
+
+  return <AppShell />
 }
 
 function App() {
-  const path = useHashRoute()
-
-  useEffect(() => {
-    document.title = `${getPageTitle(path)} · MindBloom Specialist Portal`
-  }, [path])
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [path])
-
-  if (path === ROUTES.login) {
-    return <LoginPage />
-  }
-
   return (
-    <AppShell path={path} title={getPageTitle(path)}>
-      {getPage(path)}
-    </AppShell>
+    <>
+      <DocumentTitleUpdater />
+      <Routes>
+        <Route path={ROUTES.login} element={<LoginRoute />} />
+
+        <Route element={<ProtectedLayout />}>
+          <Route path="/" element={<Navigate to={ROUTES.dashboard} replace />} />
+          <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+          <Route path={ROUTES.profile} element={<ProfilePage />} />
+          <Route path={ROUTES.availability} element={<AvailabilityPage />} />
+          <Route path={ROUTES.bookings} element={<BookingsPage />} />
+          <Route path={ROUTES.patients} element={<PatientsPage />} />
+          <Route path={ROUTES.patientRecord} element={<PatientRecordPage />} />
+          <Route path={ROUTES.clinicalNotes} element={<ClinicalNotesPage />} />
+          <Route path={ROUTES.activities} element={<ActivitiesPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </>
   )
 }
 

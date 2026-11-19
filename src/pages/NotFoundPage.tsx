@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
 import { buttonStyles } from '../components/ui/buttonStyles'
 import { ROUTES } from '../router/routes'
@@ -13,13 +14,13 @@ export function NotFoundPage() {
         The screen you requested does not exist in the Specialist Portal. Use
         the dashboard to continue.
       </p>
-      <a
+      <Link
         className={`${buttonStyles({ variant: 'primary' })} mt-6`}
-        href={`#${ROUTES.dashboard}`}
+        to={ROUTES.dashboard}
       >
         <Icon name="arrow-left" size={15} />
         Back to dashboard
-      </a>
+      </Link>
     </div>
   )
 }

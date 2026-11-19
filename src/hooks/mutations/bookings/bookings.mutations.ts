@@ -1,0 +1,62 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../../../lib/query-keys'
+import {
+  approveBooking,
+  proposeAlternativeTime,
+  rejectBooking,
+} from '../../../services/bookings/bookings.service'
+import type {
+  ProposeAlternativeTimeRequest,
+  RejectBookingRequest,
+} from '../../../types/booking.types'
+
+function useInvalidateBookingQueries() {
+  const queryClient = useQueryClient()
+
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.dashboard.summary,
+    })
+  }
+}
+
+export function useApproveBooking() {
+  const invalidate = useInvalidateBookingQueries()
+
+  return useMutation({
+    mutationFn: (id: string) => approveBooking(id),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRejectBooking() {
+  const invalidate = useInvalidateBookingQueries()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: RejectBookingRequest
+    }) => rejectBooking(id, payload),
+    onSuccess: invalidate,
+  })
+}
+
+export function useProposeAlternativeTime() {
+  const invalidate = useInvalidateBookingQueries()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: ProposeAlternativeTimeRequest
+    }) => proposeAlternativeTime(id, payload),
+    onSuccess: invalidate,
+  })
+}
