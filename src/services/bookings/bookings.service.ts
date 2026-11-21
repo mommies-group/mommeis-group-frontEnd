@@ -5,6 +5,8 @@ import type {
   Booking,
   BookingStatus,
   CalendarResponse,
+  CompleteBookingRequest,
+  MeetingInfo,
   ProposeAlternativeTimeRequest,
   RejectBookingRequest,
 } from '../../types/booking.types'
@@ -70,6 +72,28 @@ export async function proposeAlternativeTime(
   const response = await apiClient.post<ApiSuccessResponse<Booking>>(
     `/specialist/bookings/${encodeURIComponent(id)}/propose-time`,
     payload,
+  )
+  return unwrapApiData(response)
+}
+
+export async function completeBooking(
+  id: string,
+  payload: CompleteBookingRequest = {},
+): Promise<Booking> {
+  const response = await apiClient.post<ApiSuccessResponse<Booking>>(
+    `/specialist/bookings/${encodeURIComponent(id)}/complete`,
+    payload,
+  )
+  return unwrapApiData(response)
+}
+
+export async function getMeetingInfo(
+  id: string,
+  signal?: AbortSignal,
+): Promise<MeetingInfo> {
+  const response = await apiClient.get<ApiSuccessResponse<MeetingInfo>>(
+    `/specialist/bookings/${encodeURIComponent(id)}/meeting`,
+    { signal },
   )
   return unwrapApiData(response)
 }

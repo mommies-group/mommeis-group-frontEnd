@@ -18,10 +18,6 @@ export function AppShell({ path, title, children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    setSidebarOpen(false)
-  }, [currentPath])
-
-  useEffect(() => {
     document.body.classList.toggle('overflow-hidden', sidebarOpen)
     return () => document.body.classList.remove('overflow-hidden')
   }, [sidebarOpen])
@@ -75,7 +71,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
           onMenu={() => setSidebarOpen(true)}
         />
         <main
-          className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 pb-16 sm:px-6 lg:px-8 lg:py-8"
+          className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-5 pb-12 sm:px-6 lg:px-8 lg:py-6"
           id="main-content"
           tabIndex={-1}
         >

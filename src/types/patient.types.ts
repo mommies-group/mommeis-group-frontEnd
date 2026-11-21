@@ -50,6 +50,8 @@ export type ClinicalNote = {
   childId: string
   specialistId: string
   content: string
+  bookingId?: string | null
+  recommendation?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -71,4 +73,6 @@ export type ClinicalRecord = {
 
 export type CreateClinicalNoteRequest = {
   content: string
+  bookingId?: string
+  recommendation?: string
 }

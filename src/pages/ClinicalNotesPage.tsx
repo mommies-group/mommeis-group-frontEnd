@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
@@ -8,41 +8,32 @@ import { Button } from '../components/ui/Button'
 import { buttonStyles } from '../components/ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
-import { Field, Select, Textarea } from '../components/ui/Field'
+import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { InlineNotice } from '../components/ui/InlineNotice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
-import { StatusRow } from '../components/ui/StatusRow'
 import { useCreateClinicalNote } from '../hooks/mutations/clinical-notes/clinical-notes.mutations'
+import { useBookings } from '../hooks/queries/bookings/bookings.queries'
 import { useClinicalNotes } from '../hooks/queries/clinical-notes/clinical-notes.queries'
 import { usePatients } from '../hooks/queries/patients/patients.queries'
 import {
   getApiErrorMessage,
-  getApiErrorCode,
   isAccessError,
 } from '../lib/api-error'
 import { formatBirthDate, formatDateTime } from '../lib/format'
-import {
-  ROUTES,
-  patientRecordPath,
-} from '../router/routes'
+import { notifyError, notifySuccess } from '../lib/toast'
+import { ROUTES, patientRecordPath } from '../router/routes'
 
 export function ClinicalNotesPage() {
   const [searchParams] = useSearchParams()
   const initialChildId = searchParams.get('childId') ?? ''
   const [selectedChildId, setSelectedChildId] = useState(initialChildId)
-
-  useEffect(() => {
-    const childId = searchParams.get('childId')
-    if (childId) {
-      setSelectedChildId(childId)
-    }
-  }, [searchParams])
   const [note, setNote] = useState('')
-  const [notice, setNotice] = useState('')
-  const [formError, setFormError] = useState('')
+  const [recommendation, setRecommendation] = useState('')
+  const [bookingId, setBookingId] = useState('')
 
   const patients = usePatients()
+  const bookings = useBookings()
   const notes = useClinicalNotes(selectedChildId || null)
   const createNote = useCreateClinicalNote()
 
@@ -50,76 +41,59 @@ export function ClinicalNotesPage() {
     (patient) => patient.id === selectedChildId,
   )
   const accessError = notes.isError && isAccessError(notes.error)
-  const accessCode = accessError ? getApiErrorCode(notes.error) : null
   const hasDraft = note.trim().length > 0
-  const savingDisabled =
-    !selectedChildId ||
-    !note.trim() ||
-    createNote.isPending ||
-    Boolean(accessCode)
 
-  const consentState =
-    accessCode === 'NO_ELIGIBLE_APPOINTMENT'
-      ? 'Verified'
-      : accessCode === 'CONSENT_REQUIRED'
-        ? 'Not active'
-        : selectedPatient || notes.isSuccess
-          ? 'Verified'
-          : 'Checking'
-  const appointmentState =
-    accessCode === 'NO_ELIGIBLE_APPOINTMENT'
-      ? 'Not eligible'
-      : selectedPatient || notes.isSuccess
-        ? 'Verified'
-        : 'Checking'
-  const savingState = accessCode
-    ? 'Locked'
-    : selectedChildId
-      ? notes.isLoading
-        ? 'Checking'
-        : 'Available'
-      : 'Locked'
+  const appointmentOptions = useMemo(
+    () =>
+      (bookings.data ?? []).filter(
+        (booking) =>
+          booking.childId === selectedChildId &&
+          (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED'),
+      ),
+    [bookings.data, selectedChildId],
+  )
 
   const handlePatientChange = (childId: string) => {
     setSelectedChildId(childId)
+    setBookingId('')
     setNote('')
-    setNotice('')
-    setFormError('')
+    setRecommendation('')
     createNote.reset()
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setNotice('')
-    setFormError('')
     createNote.reset()
 
     if (!selectedChildId) {
-      setFormError('Select an eligible patient before saving a clinical note.')
+      notifyError(null, 'Select a patient.')
       return
     }
 
     if (!note.trim()) {
-      setFormError('Write a clinical note before saving.')
+      notifyError(null, 'Write a note before saving.')
       return
     }
 
     createNote.mutate(
-      { childId: selectedChildId, content: note.trim() },
+      {
+        childId: selectedChildId,
+        payload: {
+          content: note.trim(),
+          recommendation: recommendation.trim() || undefined,
+          bookingId: bookingId || undefined,
+        },
+      },
       {
         onSuccess: () => {
           setNote('')
-          setNotice('Clinical note saved to this patient record.')
+          setRecommendation('')
+          setBookingId('')
+          notifySuccess('Clinical note saved.')
         },
+        onError: (error) => notifyError(error),
       },
     )
-  }
-
-  const clearDraft = () => {
-    setNote('')
-    setNotice('')
-    setFormError('')
-    createNote.reset()
   }
 
   const recordHref = selectedChildId
@@ -127,38 +101,38 @@ export function ClinicalNotesPage() {
     : ROUTES.patients
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow="Clinical documentation"
         title="Clinical Notes"
-        description="Document session observations and progress while clinical access is valid."
+        icon="notes"
         actions={
           <Link
-            className={buttonStyles({ variant: 'secondary' })}
+            className={buttonStyles({ variant: 'secondary', size: 'sm' })}
             to={recordHref}
           >
-            <Icon name="id-card" size={15} />
-            View patient record
+            <Icon name="id-card" size={14} />
+            Record
           </Link>
         }
       />
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader
-            title="New clinical note"
-            description="Notes are stored as free text for the selected patient."
+            title="New note"
+            action={
+              createNote.isPending ? (
+                <Badge tone="info" dot>
+                  Saving
+                </Badge>
+              ) : null
+            }
           />
-
           <form onSubmit={handleSubmit}>
             <CardBody>
-              <div className="grid gap-5">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <Field
-                    label="Patient"
-                    htmlFor="note-patient"
-                    hint="Only consent-eligible patients from My Patients are listed."
-                  >
+              <div className="grid gap-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Patient" htmlFor="note-patient">
                     <Select
                       id="note-patient"
                       value={selectedChildId}
@@ -167,7 +141,7 @@ export function ClinicalNotesPage() {
                         handlePatientChange(event.target.value)
                       }
                     >
-                      <option value="">Select a patient</option>
+                      <option value="">Select patient</option>
                       {patients.data?.map((patient) => (
                         <option value={patient.id} key={patient.id}>
                           {patient.firstName} {patient.lastName}
@@ -175,95 +149,104 @@ export function ClinicalNotesPage() {
                       ))}
                     </Select>
                   </Field>
-                  {patients.isError ? (
-                    <div className="mt-3">
-                      <ApiErrorNotice
-                        error={patients.error}
-                        title="Could not load patients"
-                        onRetry={() => {
-                          void patients.refetch()
-                        }}
-                      />
-                    </div>
-                  ) : null}
+                  <Field
+                    label="Appointment"
+                    htmlFor="note-booking"
+                    optional
+                  >
+                    <Select
+                      id="note-booking"
+                      value={bookingId}
+                      disabled={
+                        !selectedChildId ||
+                        appointmentOptions.length === 0 ||
+                        createNote.isPending
+                      }
+                      onChange={(event) => setBookingId(event.target.value)}
+                    >
+                      <option value="">No appointment</option>
+                      {appointmentOptions.map((booking) => (
+                        <option value={booking.id} key={booking.id}>
+                          {formatDateTime(booking.scheduledAt)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
                 </div>
 
-                <Field
-                  label="Clinical note"
-                  htmlFor="clinical-note"
-                  hint="Document observations, session progress, and next steps. Parent-provided and AI-generated information is read-only."
-                >
+                {patients.isError ? (
+                  <ApiErrorNotice
+                    error={patients.error}
+                    title="Could not load patients"
+                    onRetry={() => {
+                      void patients.refetch()
+                    }}
+                  />
+                ) : null}
+
+                <Field label="Note" htmlFor="clinical-note">
                   <Textarea
                     id="clinical-note"
                     value={note}
                     disabled={
-                      !selectedChildId ||
-                      Boolean(accessCode) ||
-                      createNote.isPending
+                      !selectedChildId || Boolean(accessError) || createNote.isPending
                     }
-                    onChange={(event) => {
-                      setNote(event.target.value)
-                      setNotice('')
-                      setFormError('')
-                      createNote.reset()
-                    }}
-                    placeholder={
-                      selectedChildId
-                        ? 'Write your clinical note for this session.'
-                        : 'Select a patient before writing a note.'
-                    }
-                    rows={9}
+                    onChange={(event) => setNote(event.target.value)}
+                    placeholder="Session observations and progress"
+                    rows={8}
                   />
                 </Field>
 
-                {formError ? (
-                  <InlineNotice tone="warning">{formError}</InlineNotice>
-                ) : null}
+                <Field
+                  label="Recommendation"
+                  htmlFor="note-recommendation"
+                  optional
+                >
+                  <Input
+                    id="note-recommendation"
+                    value={recommendation}
+                    disabled={createNote.isPending}
+                    onChange={(event) => setRecommendation(event.target.value)}
+                    placeholder="Follow-up recommendation"
+                  />
+                </Field>
 
-                {notice ? (
-                  <InlineNotice tone="success">{notice}</InlineNotice>
-                ) : null}
-
-                {createNote.isError ? (
-                  <InlineNotice tone="danger">
-                    {getApiErrorMessage(createNote.error)}
+                {accessError ? (
+                  <InlineNotice tone="warning">
+                    {getApiErrorMessage(notes.error)}
                   </InlineNotice>
                 ) : null}
               </div>
             </CardBody>
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/60 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <Icon name="shield" size={13} />
-                Saving is checked against consent and appointment access.
-              </p>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="ghost" onClick={clearDraft} disabled={!hasDraft}>
-                  <Icon name="trash" size={14} />
-                  Clear draft
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={savingDisabled}
-                  aria-busy={createNote.isPending}
-                >
-                  {createNote.isPending ? (
-                    <>
-                      <span
-                        className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"
-                        aria-hidden="true"
-                      />
-                      Saving…
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="check" size={14} />
-                      Save note
-                    </>
-                  )}
-                </Button>
-              </div>
+            <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setNote('')
+                  setRecommendation('')
+                  setBookingId('')
+                  createNote.reset()
+                }}
+                disabled={!hasDraft || createNote.isPending}
+              >
+                Clear
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={
+                  !selectedChildId ||
+                  !note.trim() ||
+                  Boolean(accessError) ||
+                  createNote.isPending
+                }
+                aria-busy={createNote.isPending}
+              >
+                <Icon name="check" size={13} />
+                {createNote.isPending ? 'Saving…' : 'Save note'}
+              </Button>
             </div>
           </form>
         </Card>
@@ -271,161 +254,78 @@ export function ClinicalNotesPage() {
         <div className="flex flex-col gap-5">
           <Card>
             <CardHeader
-              title="Patient context"
-            />
-            <CardBody>
-              {selectedPatient ? (
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-teal-700">
-                      <Icon name="user" size={17} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {selectedPatient.firstName}{' '}
-                        {selectedPatient.lastName}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        Born {formatBirthDate(selectedPatient.dateOfBirth)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-3 text-[11px] leading-4 text-slate-600">
-                    Parent/guardian: {selectedPatient.parent.fullName}
-                  </div>
+              title={selectedPatient ? 'Patient' : 'Recent notes'}
+              action={
+                selectedPatient ? (
                   <Link
-                    className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+                    className={buttonStyles({ variant: 'ghost', size: 'sm' })}
                     to={patientRecordPath(selectedPatient.id)}
                   >
-                    <Icon name="id-card" size={12} />
-                    Open clinical record
+                    Record
+                    <Icon name="arrow-right" size={12} />
                   </Link>
+                ) : null
+              }
+            />
+            <CardBody flush>
+              {selectedPatient ? (
+                <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-teal-700">
+                    <Icon name="user" size={16} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-900">
+                      {selectedPatient.firstName} {selectedPatient.lastName}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">
+                      Born {formatBirthDate(selectedPatient.dateOfBirth)} ·{' '}
+                      {selectedPatient.parent.fullName}
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <EmptyState
-                  compact
-                  icon="user"
-                  title="No patient selected"
-                  description="Choose an eligible patient in the note form to associate this note with an active care relationship."
-                  action={
-                    <Link
-                      className={buttonStyles({
-                        variant: 'secondary',
-                        size: 'sm',
-                      })}
-                      to={ROUTES.patients}
-                    >
-                      <Icon name="users" size={13} />
-                      My Patients
-                    </Link>
-                  }
-                />
-              )}
-            </CardBody>
-          </Card>
+              ) : null}
 
-          <Card>
-            <CardHeader
-              title="Access context"
-              description="Both conditions must be active to save."
-            />
-            <CardBody>
-              <div>
-                <StatusRow
-                  icon="shield"
-                  label="Parental consent"
-                  value={
-                    <Badge
-                      tone={
-                        consentState === 'Verified'
-                          ? 'success'
-                          : consentState === 'Not active'
-                            ? 'danger'
-                            : 'neutral'
-                      }
-                    >
-                      {consentState}
-                    </Badge>
-                  }
-                />
-                <StatusRow
-                  icon="calendar"
-                  label="Appointment"
-                  value={
-                    <Badge
-                      tone={
-                        appointmentState === 'Verified'
-                          ? 'success'
-                          : appointmentState === 'Not eligible'
-                            ? 'danger'
-                            : 'neutral'
-                      }
-                    >
-                      {appointmentState}
-                    </Badge>
-                  }
-                />
-                <StatusRow
-                  icon="notes"
-                  label="Note saving"
-                  value={
-                    <Badge
-                      tone={
-                        savingState === 'Available'
-                          ? 'success'
-                          : savingState === 'Locked'
-                            ? 'danger'
-                            : 'neutral'
-                      }
-                    >
-                      {savingState}
-                    </Badge>
-                  }
-                />
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Recent notes"
-              description="Notes already saved for the selected patient."
-            />
-            <CardBody>
               {!selectedChildId ? (
-                <EmptyState
-                  compact
-                  icon="notes"
-                  title="Select a patient"
-                  description="Recent notes appear after a patient is selected."
-                />
+                <div className="p-4">
+                  <EmptyState
+                    compact
+                    icon="notes"
+                    title="Select a patient"
+                  />
+                </div>
               ) : notes.isLoading ? (
-                <div className="grid gap-2">
+                <div className="grid gap-2 p-4">
                   <Skeleton className="h-14 w-full rounded-lg" />
                   <Skeleton className="h-14 w-full rounded-lg" />
                 </div>
               ) : accessError ? (
-                <InlineNotice tone="warning">
-                  {getApiErrorMessage(notes.error)}
-                </InlineNotice>
+                <div className="p-4">
+                  <InlineNotice tone="warning">
+                    {getApiErrorMessage(notes.error)}
+                  </InlineNotice>
+                </div>
               ) : notes.isError ? (
-                <ApiErrorNotice
-                  error={notes.error}
-                  title="Could not load notes"
-                  onRetry={() => {
-                    void notes.refetch()
-                  }}
-                />
+                <div className="p-4">
+                  <ApiErrorNotice
+                    error={notes.error}
+                    title="Could not load notes"
+                    onRetry={() => {
+                      void notes.refetch()
+                    }}
+                  />
+                </div>
               ) : notes.data && notes.data.length > 0 ? (
-                <div className="divide-y divide-slate-100">
+                <div className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
                   {notes.data.map((savedNote) => (
-                    <article
-                      className="py-3 first:pt-0 last:pb-0"
-                      key={savedNote.id}
-                    >
-                      <p className="whitespace-pre-wrap text-xs leading-5 text-slate-700">
+                    <article className="px-4 py-3" key={savedNote.id}>
+                      <p className="whitespace-pre-wrap text-[11px] leading-5 text-slate-700">
                         {savedNote.content}
                       </p>
+                      {savedNote.recommendation ? (
+                        <p className="mt-1.5 rounded-md bg-teal-50 px-2 py-1 text-[10px] text-teal-900">
+                          {savedNote.recommendation}
+                        </p>
+                      ) : null}
                       <p className="mt-1.5 text-[10px] text-slate-500">
                         {formatDateTime(savedNote.createdAt)}
                       </p>
@@ -433,12 +333,14 @@ export function ClinicalNotesPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState
-                  compact
-                  icon="notes"
-                  title="No notes yet"
-                  description="Saved notes for this patient will appear here."
-                />
+                <div className="p-4">
+                  <EmptyState
+                    compact
+                    icon="notes"
+                    title="No notes"
+                    description="Saved notes will appear here."
+                  />
+                </div>
               )}
             </CardBody>
           </Card>

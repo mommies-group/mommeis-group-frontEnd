@@ -2,10 +2,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../../lib/query-keys'
 import {
   approveBooking,
+  completeBooking,
+  getMeetingInfo,
   proposeAlternativeTime,
   rejectBooking,
 } from '../../../services/bookings/bookings.service'
 import type {
+  CompleteBookingRequest,
   ProposeAlternativeTimeRequest,
   RejectBookingRequest,
 } from '../../../types/booking.types'
@@ -58,5 +61,26 @@ export function useProposeAlternativeTime() {
       payload: ProposeAlternativeTimeRequest
     }) => proposeAlternativeTime(id, payload),
     onSuccess: invalidate,
+  })
+}
+
+export function useCompleteBooking() {
+  const invalidate = useInvalidateBookingQueries()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: CompleteBookingRequest
+    }) => completeBooking(id, payload),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMeetingInfo() {
+  return useMutation({
+    mutationFn: (id: string) => getMeetingInfo(id),
   })
 }

@@ -4,6 +4,7 @@ import type { ApiSuccessResponse } from '../../types/api.types'
 import type {
   AvailabilitySlot,
   AvailabilitySlotInput,
+  AvailabilitySlotPatch,
   SpecialistProfile,
   UpdateProfileRequest,
 } from '../../types/profile.types'
@@ -46,4 +47,29 @@ export async function replaceAvailability(
     { slots },
   )
   return unwrapApiData(response)
+}
+
+export async function createAvailabilitySlot(
+  payload: AvailabilitySlotInput,
+): Promise<AvailabilitySlot> {
+  const response = await apiClient.post<ApiSuccessResponse<AvailabilitySlot>>(
+    '/specialist/availability',
+    payload,
+  )
+  return unwrapApiData(response)
+}
+
+export async function updateAvailabilitySlot(
+  id: string,
+  payload: AvailabilitySlotPatch,
+): Promise<AvailabilitySlot> {
+  const response = await apiClient.patch<ApiSuccessResponse<AvailabilitySlot>>(
+    `/specialist/availability/${encodeURIComponent(id)}`,
+    payload,
+  )
+  return unwrapApiData(response)
+}
+
+export async function deleteAvailabilitySlot(id: string): Promise<void> {
+  await apiClient.delete(`/specialist/availability/${encodeURIComponent(id)}`)
 }

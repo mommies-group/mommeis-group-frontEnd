@@ -1,17 +1,26 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import { Icon } from '../components/icons/Icon'
 import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
+import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Callout } from '../components/ui/Callout'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
+import { EmptyState } from '../components/ui/EmptyState'
 import { Field, Input, Select } from '../components/ui/Field'
-import { InlineNotice } from '../components/ui/InlineNotice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
-import { useReplaceAvailability } from '../hooks/mutations/profile/profile.mutations'
+import {
+  useCreateAvailabilitySlot,
+  useDeleteAvailabilitySlot,
+  useUpdateAvailabilitySlot,
+} from '../hooks/mutations/profile/profile.mutations'
 import { useAvailability } from '../hooks/queries/profile/profile.queries'
-import { getApiErrorMessage } from '../lib/api-error'
-import type { AvailabilitySlot, DayOfWeek } from '../types/profile.types'
+import { notifyError, notifySuccess } from '../lib/toast'
+import type {
+  AvailabilitySlot,
+  AvailabilityStatus,
+  DayOfWeek,
+} from '../types/profile.types'
 
 const DAYS: Array<{ label: string; short: string; value: DayOfWeek }> = [
   { label: 'Monday', short: 'Mon', value: 1 },
@@ -23,16 +32,9 @@ const DAYS: Array<{ label: string; short: string; value: DayOfWeek }> = [
   { label: 'Sunday', short: 'Sun', value: 0 },
 ]
 
-type DayWindow = {
-  start: string
-  end: string
-}
-
-type AvailabilityDraft = Partial<Record<DayOfWeek, DayWindow>>
-
-type Feedback = {
-  tone: 'success' | 'info' | 'warning' | 'danger'
-  text: string
+const STATUS_LABELS: Record<AvailabilityStatus, string> = {
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
 }
 
 function toMinutes(value: string): number {
@@ -44,160 +46,98 @@ function formatRange(start: string, end: string): string {
   return `${start} – ${end}`
 }
 
-function buildDraft(serverSlots: AvailabilitySlot[]): AvailabilityDraft {
-  const draft: AvailabilityDraft = {}
-  serverSlots.forEach((slot) => {
-    draft[slot.dayOfWeek] = {
-      start: slot.startTime,
-      end: slot.endTime,
-    }
-  })
-  return draft
+function slotStatus(slot: AvailabilitySlot): AvailabilityStatus {
+  return slot.status ?? 'ACTIVE'
 }
 
 export function AvailabilityPage() {
   const availability = useAvailability()
-  const replaceAvailability = useReplaceAvailability()
-  const [overrides, setOverrides] = useState<AvailabilityDraft | null>(null)
-  const [hasEdits, setHasEdits] = useState(false)
-  const [draftDay, setDraftDay] = useState<DayOfWeek>(1)
-  const [draftStart, setDraftStart] = useState('09:00')
-  const [draftEnd, setDraftEnd] = useState('17:00')
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const createSlot = useCreateAvailabilitySlot()
+  const updateSlot = useUpdateAvailabilitySlot()
+  const deleteSlot = useDeleteAvailabilitySlot()
 
-  const slots = overrides ?? buildDraft(availability.data ?? [])
-  const slotCount = DAYS.filter((day) => slots[day.value]).length
-  const queryReady = availability.isSuccess
-  const saveDisabled =
-    !queryReady ||
-    !hasEdits ||
-    slotCount === 0 ||
-    replaceAvailability.isPending
+  const [day, setDay] = useState<DayOfWeek>(1)
+  const [start, setStart] = useState('09:00')
+  const [end, setEnd] = useState('17:00')
+  const [status, setStatus] = useState<AvailabilityStatus>('ACTIVE')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const applyWindow = () => {
-    setFeedback(null)
+  const slotsByDay = useMemo(() => {
+    const grouped = new Map<DayOfWeek, AvailabilitySlot[]>()
 
-    if (toMinutes(draftEnd) <= toMinutes(draftStart)) {
-      setFeedback({
-        tone: 'warning',
-        text: 'End time must be later than start time.',
-      })
+    for (const slot of availability.data ?? []) {
+      const items = grouped.get(slot.dayOfWeek) ?? []
+      items.push(slot)
+      grouped.set(slot.dayOfWeek, items)
+    }
+
+    for (const items of grouped.values()) {
+      items.sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime))
+    }
+
+    return grouped
+  }, [availability.data])
+
+  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    createSlot.reset()
+
+    if (toMinutes(end) <= toMinutes(start)) {
+      notifyError(null, 'End time must be after start time.')
       return
     }
 
-    const current =
-      overrides ?? buildDraft(availability.data ?? [])
-    setOverrides({
-      ...current,
-      [draftDay]: { start: draftStart, end: draftEnd },
-    })
-    setHasEdits(true)
-    const day = DAYS.find((item) => item.value === draftDay)
-    setFeedback({
-      tone: 'info',
-      text: `${day?.label ?? 'The selected day'} window updated locally. Save availability to apply it.`,
-    })
+    createSlot.mutate(
+      { dayOfWeek: day, startTime: start, endTime: end, status },
+      {
+        onSuccess: () => notifySuccess('Availability slot added.'),
+        onError: (error) => notifyError(error),
+      },
+    )
   }
 
-  const removeWindow = (day: DayOfWeek) => {
-    const current = overrides ?? buildDraft(availability.data ?? [])
-    const next = { ...current }
-    delete next[day]
-    setOverrides(next)
-    setHasEdits(true)
-    setFeedback({
-      tone: 'info',
-      text: 'Window removed locally. Save availability to apply the change.',
-    })
+  const handleStatusChange = (
+    slot: AvailabilitySlot,
+    nextStatus: AvailabilityStatus,
+  ) => {
+    updateSlot.mutate(
+      { id: slot.id, payload: { status: nextStatus } },
+      {
+        onSuccess: () => notifySuccess('Slot status updated.'),
+        onError: (error) => notifyError(error),
+      },
+    )
   }
 
-  const focusForm = (day: DayOfWeek) => {
-    setDraftDay(day)
-    const form = document.getElementById('availability-form')
-    form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    document.getElementById('availability-day')?.focus()
-  }
-
-  const saveAvailability = () => {
-    setFeedback(null)
-    replaceAvailability.reset()
-
-    const payload = DAYS.flatMap((day) => {
-      const window = slots[day.value]
-
-      if (!window) {
-        return []
-      }
-
-      return [
-        {
-          dayOfWeek: day.value,
-          startTime: window.start,
-          endTime: window.end,
-        },
-      ]
-    })
-
-    if (payload.length === 0) {
-      setFeedback({
-        tone: 'warning',
-        text: 'The availability API requires at least one weekly window.',
-      })
+  const handleDelete = (slotId: string) => {
+    if (deleteId !== slotId) {
+      setDeleteId(slotId)
       return
     }
 
-    replaceAvailability.mutate(payload, {
+    deleteSlot.mutate(slotId, {
       onSuccess: () => {
-        setOverrides(null)
-        setHasEdits(false)
-        setFeedback({
-          tone: 'success',
-          text: 'Availability saved. Booking windows now use this weekly pattern.',
-        })
+        setDeleteId(null)
+        notifySuccess('Availability slot removed.')
+      },
+      onError: (error) => {
+        setDeleteId(null)
+        notifyError(error)
       },
     })
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow="Practice settings"
         title="Availability"
-        description="Build a weekly working pattern. Times outside your available windows are shown as unavailable."
+        icon="clock"
         actions={
-          <Button
-            variant="primary"
-            onClick={saveAvailability}
-            disabled={saveDisabled}
-            aria-busy={replaceAvailability.isPending}
-          >
-            {replaceAvailability.isPending ? (
-              <>
-                <span
-                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"
-                  aria-hidden="true"
-                />
-                Saving…
-              </>
-            ) : (
-              <>
-                <Icon name="check" size={15} />
-                Save availability
-              </>
-            )}
-          </Button>
+          <Badge tone="brand">
+            {(availability.data ?? []).length} weekly slots
+          </Badge>
         }
       />
-
-      {feedback ? (
-        <InlineNotice tone={feedback.tone}>{feedback.text}</InlineNotice>
-      ) : null}
-
-      {replaceAvailability.isError ? (
-        <InlineNotice tone="danger">
-          {getApiErrorMessage(replaceAvailability.error)}
-        </InlineNotice>
-      ) : null}
 
       {availability.isError ? (
         <ApiErrorNotice
@@ -209,126 +149,119 @@ export function AvailabilityPage() {
         />
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
-        <div className="flex flex-col gap-5">
-          <Card>
-            <CardHeader
-              title="Weekly availability"
-              description="One available window can be stored per day by the current API."
-              action={
-                <div
-                  className="flex flex-wrap items-center gap-3 text-[10px] font-medium text-slate-500"
-                  aria-label="Availability legend"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-sm bg-teal-600" />
-                    Available
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" />
-                    Unavailable
-                  </span>
-                </div>
-              }
-            />
-            <CardBody flush>
-              {availability.isLoading ? (
-                <div className="grid gap-3 p-5" aria-label="Loading availability">
-                  {[0, 1, 2, 3, 4].map((item) => (
-                    <Skeleton className="h-12 w-full rounded-lg" key={item} />
-                  ))}
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {DAYS.map((day) => {
-                    const window = slots[day.value]
-
-                    return (
-                      <div
-                        className="grid gap-3 px-5 py-3 sm:grid-cols-[130px_minmax(0,1fr)_auto] sm:items-center"
-                        key={day.value}
-                      >
-                        <div>
-                          <span className="block text-xs font-semibold text-slate-800">
-                            {day.label}
-                          </span>
-                          <span className="mt-0.5 block text-[10px] text-slate-600">
-                            {window ? formatRange(window.start, window.end) : 'Unavailable'}
-                          </span>
-                        </div>
-
-                        <div className="min-h-10 rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
-                          {window ? (
-                            <span className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-[10px] font-semibold text-teal-800">
-                              {formatRange(window.start, window.end)}
-                              <button
-                                type="button"
-                                className="flex h-3.5 w-3.5 items-center justify-center rounded-full transition hover:bg-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                                aria-label={`Remove availability on ${day.label} from ${window.start} to ${window.end}`}
-                                onClick={() => removeWindow(day.value)}
-                              >
-                                <Icon name="close" size={9} />
-                              </button>
-                            </span>
-                          ) : (
-                            <span className="flex min-h-7 items-center text-[10px] text-slate-600">
-                              Unavailable all day
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="justify-self-start sm:justify-self-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!queryReady}
-                            onClick={() => focusForm(day.value)}
-                          >
-                            <Icon name={window ? 'edit' : 'plus'} size={13} />
-                            <span>{window ? 'Edit window' : 'Add window'}</span>
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Week overview"
-              description="A visual representation of available windows across the week."
-            />
-            <CardBody>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                {DAYS.map((day) => {
-                  const window = slots[day.value]
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
+        <Card>
+          <CardHeader
+            title="Weekly availability"
+            action={
+              <div className="flex items-center gap-3 text-[10px] font-medium text-slate-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-teal-600" />
+                  Active
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-slate-300" />
+                  Inactive
+                </span>
+              </div>
+            }
+          />
+          <CardBody flush>
+            {availability.isLoading ? (
+              <div className="grid gap-2 p-4">
+                {[0, 1, 2, 3, 4].map((item) => (
+                  <Skeleton className="h-14 w-full rounded-lg" key={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {DAYS.map((item) => {
+                  const slots = slotsByDay.get(item.value) ?? []
 
                   return (
                     <div
-                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-2"
-                      key={day.value}
+                      className="grid gap-2 px-4 py-3 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-start"
+                      key={item.value}
                     >
-                      <span className="block text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                        {day.short}
-                      </span>
-                      <div
-                        className="mt-2 flex min-h-28 flex-col gap-1 rounded-lg border border-dashed border-slate-200 bg-slate-100 p-1.5"
-                        role="img"
-                        aria-label={`${day.label}: ${
-                          window ? formatRange(window.start, window.end) : 'unavailable all day'
-                        }`}
-                      >
-                        {window ? (
-                          <span className="rounded bg-teal-600 px-1 py-1 text-center text-[9px] font-semibold leading-3 text-white">
-                            <span className="block">{window.start}</span>
-                            <span className="block">– {window.end}</span>
-                          </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600">
+                          {item.short}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-800">
+                          {item.label}
+                        </span>
+                      </div>
+
+                      <div className="flex min-h-9 flex-wrap items-center gap-2">
+                        {slots.length > 0 ? (
+                          slots.map((slot) => {
+                            const currentStatus = slotStatus(slot)
+                            return (
+                              <div
+                                className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                                  currentStatus === 'ACTIVE'
+                                    ? 'border-teal-200 bg-teal-50/70'
+                                    : 'border-slate-200 bg-slate-50'
+                                }`}
+                                key={slot.id}
+                              >
+                                <span className="text-[11px] font-semibold text-slate-700">
+                                  {formatRange(
+                                    slot.startTime,
+                                    slot.endTime,
+                                  )}
+                                </span>
+                                <Select
+                                  aria-label={`Status for ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                                  value={currentStatus}
+                                  disabled={updateSlot.isPending}
+                                  className="h-7 w-24 text-[11px]"
+                                  onChange={(event) =>
+                                    handleStatusChange(
+                                      slot,
+                                      event.target
+                                        .value as AvailabilityStatus,
+                                    )
+                                  }
+                                >
+                                  <option value="ACTIVE">Active</option>
+                                  <option value="INACTIVE">Inactive</option>
+                                </Select>
+                                {deleteId === slot.id ? (
+                                  <span className="flex items-center gap-1">
+                                    <Button
+                                      variant="danger"
+                                      size="sm"
+                                      disabled={deleteSlot.isPending}
+                                      onClick={() => handleDelete(slot.id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={deleteSlot.isPending}
+                                      onClick={() => setDeleteId(null)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                                    aria-label={`Delete ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                                    onClick={() => setDeleteId(slot.id)}
+                                  >
+                                    <Icon name="trash" size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })
                         ) : (
-                          <span className="flex flex-1 items-center justify-center text-center text-[9px] leading-3 text-slate-600">
-                            Unavailable
+                          <span className="text-[11px] text-slate-500">
+                            No slots
                           </span>
                         )}
                       </div>
@@ -336,75 +269,96 @@ export function AvailabilityPage() {
                   )
                 })}
               </div>
-              <Callout tone="neutral" className="mt-4">
-                Neutral columns are unavailable. Only windows saved here become
-                bookable availability.
-              </Callout>
-            </CardBody>
-          </Card>
-        </div>
+            )}
+          </CardBody>
+        </Card>
 
-        <div className="flex flex-col gap-5">
-          <Card>
-            <CardHeader
-              title="Add or update a window"
-              description="The API stores one start and end time for each day."
-            />
+        <Card>
+          <CardHeader
+            title="Add slot"
+            action={
+              <Badge tone={status === 'ACTIVE' ? 'success' : 'neutral'}>
+                {STATUS_LABELS[status]}
+              </Badge>
+            }
+          />
+          <form onSubmit={handleCreate}>
             <CardBody>
-              <div className="grid gap-4" id="availability-form">
-                <Field label="Working day" htmlFor="availability-day">
+              <div className="grid gap-4">
+                <Field label="Day" htmlFor="availability-day">
                   <Select
                     id="availability-day"
-                    value={draftDay}
-                    disabled={!queryReady || replaceAvailability.isPending}
+                    value={day}
+                    disabled={createSlot.isPending}
                     onChange={(event) =>
-                      setDraftDay(Number(event.target.value) as DayOfWeek)
+                      setDay(Number(event.target.value) as DayOfWeek)
                     }
                   >
-                    {DAYS.map((day) => (
-                      <option value={day.value} key={day.value}>
-                        {day.label}
+                    {DAYS.map((item) => (
+                      <option value={item.value} key={item.value}>
+                        {item.label}
                       </option>
                     ))}
                   </Select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Start time" htmlFor="availability-start">
+                  <Field label="Start" htmlFor="availability-start">
                     <Input
                       id="availability-start"
                       type="time"
-                      value={draftStart}
-                      disabled={!queryReady || replaceAvailability.isPending}
-                      onChange={(event) => setDraftStart(event.target.value)}
+                      value={start}
+                      disabled={createSlot.isPending}
+                      onChange={(event) => setStart(event.target.value)}
                     />
                   </Field>
-                  <Field label="End time" htmlFor="availability-end">
+                  <Field label="End" htmlFor="availability-end">
                     <Input
                       id="availability-end"
                       type="time"
-                      value={draftEnd}
-                      disabled={!queryReady || replaceAvailability.isPending}
-                      onChange={(event) => setDraftEnd(event.target.value)}
+                      value={end}
+                      disabled={createSlot.isPending}
+                      onChange={(event) => setEnd(event.target.value)}
                     />
                   </Field>
                 </div>
-                <Button
-                  variant="secondary"
-                  block
-                  onClick={applyWindow}
-                  disabled={!queryReady || replaceAvailability.isPending}
-                >
-                  <Icon name="plus" size={14} />
-                  {slots[draftDay] ? 'Update window' : 'Add window to week'}
-                </Button>
-                <p className="text-[11px] leading-4 text-slate-500">
-                  Times are shown in your local time zone. Applying a window for
-                  a day replaces the existing window for that day.
-                </p>
+                <Field label="Status" htmlFor="availability-status">
+                  <Select
+                    id="availability-status"
+                    value={status}
+                    disabled={createSlot.isPending}
+                    onChange={(event) =>
+                      setStatus(event.target.value as AvailabilityStatus)
+                    }
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </Select>
+                </Field>
+
+                {availability.data && availability.data.length === 0 ? (
+                  <EmptyState
+                    compact
+                    icon="clock"
+                    title="No availability yet"
+                  />
+                ) : null}
               </div>
             </CardBody>
-          </Card>
-        </div>
+            <div className="border-t border-slate-200 bg-slate-50/60 px-4 py-3">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                block
+                disabled={createSlot.isPending}
+                aria-busy={createSlot.isPending}
+              >
+                <Icon name="plus" size={13} />
+                {createSlot.isPending ? 'Adding…' : 'Add slot'}
+              </Button>
+            </div>
+          </form>
+        </Card>
       </div>
     </div>
   )

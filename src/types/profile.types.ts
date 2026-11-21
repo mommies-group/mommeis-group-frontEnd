@@ -21,18 +21,27 @@ export type UpdateProfileRequest = {
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
+export type AvailabilityStatus = 'ACTIVE' | 'INACTIVE'
+
 export type AvailabilitySlot = {
   id: string
   specialistId: string
   dayOfWeek: DayOfWeek
   startTime: string
   endTime: string
+  status?: AvailabilityStatus
 }
 
 export type AvailabilitySlotInput = {
   dayOfWeek: DayOfWeek
   startTime: string
   endTime: string
+  status?: AvailabilityStatus
+}
+
+export type AvailabilitySlotPatch = {
+  endTime?: string
+  status?: AvailabilityStatus
 }
 
 export type ReplaceAvailabilityRequest = {

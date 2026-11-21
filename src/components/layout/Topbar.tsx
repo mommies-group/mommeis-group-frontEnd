@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../../router/routes'
 import { Icon } from '../icons/Icon'
 import { Logo } from '../ui/Logo'
 
@@ -32,6 +34,14 @@ export function Topbar({ title, onMenu, menuOpen }: TopbarProps) {
         <Icon name="chevron-right" size={12} />
         <span className="truncate font-semibold text-slate-800">{title}</span>
       </nav>
+
+      <Link
+        className="ml-auto inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+        to={ROUTES.privacy}
+      >
+        <Icon name="shield" size={14} />
+        Privacy
+      </Link>
     </header>
   )
 }

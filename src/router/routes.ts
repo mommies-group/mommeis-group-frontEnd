@@ -10,6 +10,7 @@ export const ROUTES = {
   patientRecord: '/patients/record',
   clinicalNotes: '/clinical-notes',
   activities: '/activities',
+  privacy: '/privacy',
 } as const
 
 export type NavItem = {
@@ -54,6 +55,11 @@ export const NAV_GROUPS: NavGroup[] = [
         path: ROUTES.profile,
         icon: 'id-card',
       },
+      {
+        label: 'Privacy',
+        path: ROUTES.privacy,
+        icon: 'shield',
+      },
     ],
   },
 ]
@@ -68,6 +74,7 @@ const titles: Record<string, string> = {
   [ROUTES.patientRecord]: 'Patient Clinical Record',
   [ROUTES.clinicalNotes]: 'Clinical Notes',
   [ROUTES.activities]: 'Activities',
+  [ROUTES.privacy]: 'Privacy',
 }
 
 export function getPageTitle(path: string): string {
