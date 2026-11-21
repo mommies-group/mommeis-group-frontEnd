@@ -15,6 +15,7 @@ import {
   useUpdateAvailabilitySlot,
 } from '../hooks/mutations/profile/profile.mutations'
 import { useAvailability } from '../hooks/queries/profile/profile.queries'
+import { formatClockTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
   AvailabilitySlot,
@@ -43,7 +44,7 @@ function toMinutes(value: string): number {
 }
 
 function formatRange(start: string, end: string): string {
-  return `${start} – ${end}`
+  return `${formatClockTime(start)} – ${formatClockTime(end)}`
 }
 
 function slotStatus(slot: AvailabilitySlot): AvailabilityStatus {
@@ -57,10 +58,23 @@ export function AvailabilityPage() {
   const deleteSlot = useDeleteAvailabilitySlot()
 
   const [day, setDay] = useState<DayOfWeek>(1)
-  const [start, setStart] = useState('09:00')
-  const [end, setEnd] = useState('17:00')
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
   const [status, setStatus] = useState<AvailabilityStatus>('ACTIVE')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editStart, setEditStart] = useState('')
+  const [editEnd, setEditEnd] = useState('')
+  const [editStatus, setEditStatus] = useState<AvailabilityStatus>('ACTIVE')
+
+  const editingSlot =
+    (availability.data ?? []).find((slot) => slot.id === editingId) ?? null
+  const isEditing = Boolean(editingSlot)
+  const activeDay = editingSlot?.dayOfWeek ?? day
+  const activeStart = editingSlot ? editStart : start
+  const activeEnd = editingSlot ? editEnd : end
+  const activeStatus = editingSlot ? editStatus : status
+  const isBusy = createSlot.isPending || updateSlot.isPending
 
   const slotsByDay = useMemo(() => {
     const grouped = new Map<DayOfWeek, AvailabilitySlot[]>()
@@ -78,12 +92,70 @@ export function AvailabilityPage() {
     return grouped
   }, [availability.data])
 
-  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+  const startEditing = (slot: AvailabilitySlot) => {
+    setDeleteId(null)
+    createSlot.reset()
+    updateSlot.reset()
+    setEditingId(slot.id)
+    setEditStart(slot.startTime)
+    setEditEnd(slot.endTime)
+    setEditStatus(slotStatus(slot))
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditStart('')
+    setEditEnd('')
+    setEditStatus('ACTIVE')
+    updateSlot.reset()
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     createSlot.reset()
+    updateSlot.reset()
 
-    if (toMinutes(end) <= toMinutes(start)) {
+    if (!activeStart || !activeEnd) {
+      notifyError(null, 'Choose a start and end time.')
+      return
+    }
+
+    if (toMinutes(activeEnd) <= toMinutes(activeStart)) {
       notifyError(null, 'End time must be after start time.')
+      return
+    }
+
+    const overlapsExistingSlot = (availability.data ?? []).some(
+      (slot) =>
+        slot.id !== editingId &&
+        slot.dayOfWeek === activeDay &&
+        toMinutes(activeStart) < toMinutes(slot.endTime) &&
+        toMinutes(activeEnd) > toMinutes(slot.startTime),
+    )
+
+    if (overlapsExistingSlot) {
+      notifyError(null, 'This time overlaps an existing slot — edit it instead.')
+      return
+    }
+
+    if (editingSlot) {
+      updateSlot.mutate(
+        {
+          id: editingSlot.id,
+          payload: {
+            startTime: activeStart,
+            endTime: activeEnd,
+            status: activeStatus,
+          },
+        },
+        {
+          onSuccess: () => {
+            cancelEditing()
+            notifySuccess('Availability slot updated.')
+          },
+          onError: (error) => notifyError(error),
+        },
+      )
       return
     }
 
@@ -103,7 +175,12 @@ export function AvailabilityPage() {
     updateSlot.mutate(
       { id: slot.id, payload: { status: nextStatus } },
       {
-        onSuccess: () => notifySuccess('Slot status updated.'),
+        onSuccess: () => {
+          if (editingId === slot.id) {
+            setEditStatus(nextStatus)
+          }
+          notifySuccess('Slot status updated.')
+        },
         onError: (error) => notifyError(error),
       },
     )
@@ -118,6 +195,9 @@ export function AvailabilityPage() {
     deleteSlot.mutate(slotId, {
       onSuccess: () => {
         setDeleteId(null)
+        if (editingId === slotId) {
+          cancelEditing()
+        }
         notifySuccess('Availability slot removed.')
       },
       onError: (error) => {
@@ -199,6 +279,10 @@ export function AvailabilityPage() {
                             return (
                               <div
                                 className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                                  editingId === slot.id
+                                    ? 'ring-2 ring-teal-400 ring-offset-1'
+                                    : ''
+                                } ${
                                   currentStatus === 'ACTIVE'
                                     ? 'border-teal-200 bg-teal-50/70'
                                     : 'border-slate-200 bg-slate-50'
@@ -227,6 +311,14 @@ export function AvailabilityPage() {
                                   <option value="ACTIVE">Active</option>
                                   <option value="INACTIVE">Inactive</option>
                                 </Select>
+                                <button
+                                  type="button"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                                  aria-label={`Edit ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                                  onClick={() => startEditing(slot)}
+                                >
+                                  <Icon name="edit" size={13} />
+                                </button>
                                 {deleteId === slot.id ? (
                                   <span className="flex items-center gap-1">
                                     <Button
@@ -275,21 +367,26 @@ export function AvailabilityPage() {
 
         <Card>
           <CardHeader
-            title="Add slot"
+            title={isEditing ? 'Edit slot' : 'Add slot'}
             action={
-              <Badge tone={status === 'ACTIVE' ? 'success' : 'neutral'}>
-                {STATUS_LABELS[status]}
+              <Badge tone={activeStatus === 'ACTIVE' ? 'success' : 'neutral'}>
+                {STATUS_LABELS[activeStatus]}
               </Badge>
             }
           />
-          <form onSubmit={handleCreate}>
+          <form onSubmit={handleSubmit}>
             <CardBody>
               <div className="grid gap-4">
+                {editingSlot ? (
+                  <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-3 py-2 text-[11px] text-teal-900">
+                    Editing {formatRange(editingSlot.startTime, editingSlot.endTime)}
+                  </div>
+                ) : null}
                 <Field label="Day" htmlFor="availability-day">
                   <Select
                     id="availability-day"
-                    value={day}
-                    disabled={createSlot.isPending}
+                    value={activeDay}
+                    disabled={isEditing || isBusy}
                     onChange={(event) =>
                       setDay(Number(event.target.value) as DayOfWeek)
                     }
@@ -306,55 +403,88 @@ export function AvailabilityPage() {
                     <Input
                       id="availability-start"
                       type="time"
-                      value={start}
-                      disabled={createSlot.isPending}
-                      onChange={(event) => setStart(event.target.value)}
+                      lang="en-US"
+                      value={activeStart}
+                      disabled={isBusy}
+                      onChange={(event) =>
+                        isEditing
+                          ? setEditStart(event.target.value)
+                          : setStart(event.target.value)
+                      }
                     />
                   </Field>
                   <Field label="End" htmlFor="availability-end">
                     <Input
                       id="availability-end"
                       type="time"
-                      value={end}
-                      disabled={createSlot.isPending}
-                      onChange={(event) => setEnd(event.target.value)}
+                      lang="en-US"
+                      value={activeEnd}
+                      disabled={isBusy}
+                      onChange={(event) =>
+                        isEditing
+                          ? setEditEnd(event.target.value)
+                          : setEnd(event.target.value)
+                      }
                     />
                   </Field>
                 </div>
+                {activeStart && activeEnd ? (
+                  <p className="-mt-2 text-[11px] font-medium text-slate-500">
+                    Selected: {formatRange(activeStart, activeEnd)}
+                  </p>
+                ) : null}
                 <Field label="Status" htmlFor="availability-status">
                   <Select
                     id="availability-status"
-                    value={status}
-                    disabled={createSlot.isPending}
-                    onChange={(event) =>
-                      setStatus(event.target.value as AvailabilityStatus)
-                    }
+                    value={activeStatus}
+                    disabled={isBusy}
+                    onChange={(event) => {
+                      const next = event.target.value as AvailabilityStatus
+                      if (isEditing) {
+                        setEditStatus(next)
+                      } else {
+                        setStatus(next)
+                      }
+                    }}
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                   </Select>
                 </Field>
 
-                {availability.data && availability.data.length === 0 ? (
-                  <EmptyState
-                    compact
-                    icon="clock"
-                    title="No availability yet"
-                  />
+                {!isEditing && availability.data && availability.data.length === 0 ? (
+                  <EmptyState compact icon="clock" title="No availability yet" />
                 ) : null}
               </div>
             </CardBody>
-            <div className="border-t border-slate-200 bg-slate-50/60 px-4 py-3">
+            <div className="flex items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-3">
+              {isEditing ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelEditing}
+                  disabled={isBusy}
+                >
+                  Cancel
+                </Button>
+              ) : null}
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
-                block
-                disabled={createSlot.isPending}
-                aria-busy={createSlot.isPending}
+                block={!isEditing}
+                disabled={isBusy}
+                aria-busy={isBusy}
               >
-                <Icon name="plus" size={13} />
-                {createSlot.isPending ? 'Adding…' : 'Add slot'}
+                <Icon name={isEditing ? 'check' : 'plus'} size={13} />
+                {isBusy
+                  ? isEditing
+                    ? 'Saving…'
+                    : 'Adding…'
+                  : isEditing
+                    ? 'Save changes'
+                    : 'Add slot'}
               </Button>
             </div>
           </form>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon, type IconName } from '../components/icons/Icon'
 import { BookingStatusBadge } from '../components/bookings/bookingStatus'
@@ -7,12 +7,19 @@ import { Badge } from '../components/ui/Badge'
 import { buttonStyles } from '../components/ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Input } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
+import {
+  useApproveBooking,
+  useRejectBooking,
+} from '../hooks/mutations/bookings/bookings.mutations'
 import { useDashboardSummary } from '../hooks/queries/dashboard/dashboard.queries'
 import { usePendingBookings } from '../hooks/queries/bookings/bookings.queries'
 import { formatDateTime } from '../lib/format'
-import { ROUTES } from '../router/routes'
+import { notifyError, notifySuccess } from '../lib/toast'
+import { bookingReviewPath, ROUTES } from '../router/routes'
+import type { Booking } from '../types/booking.types'
 
 type SummaryCardProps = {
   label: string
@@ -47,8 +54,47 @@ function SummaryCard({ label, icon, value, hint, href }: SummaryCardProps) {
 export function DashboardPage() {
   const summary = useDashboardSummary()
   const pendingBookings = usePendingBookings()
+  const approveBooking = useApproveBooking()
+  const rejectBooking = useRejectBooking()
+  const [rejectingBookingId, setRejectingBookingId] = useState<string | null>(
+    null,
+  )
+  const [rejectReason, setRejectReason] = useState('')
   const data = summary.data
   const nextAppointment = data?.upcomingAppointments[0]
+  const isMutatingBooking = approveBooking.isPending || rejectBooking.isPending
+
+  const handleApprove = (booking: Booking) => {
+    if (booking.proposals?.[0]?.status === 'PENDING') {
+      return
+    }
+
+    approveBooking.mutate(booking.id, {
+      onSuccess: () => {
+        notifySuccess('Booking approved.')
+      },
+      onError: (error) => notifyError(error),
+    })
+  }
+
+  const handleReject = (booking: Booking) => {
+    if (!rejectReason.trim()) {
+      notifyError(null, 'Enter a rejection reason.')
+      return
+    }
+
+    rejectBooking.mutate(
+      { id: booking.id, payload: { reason: rejectReason.trim() } },
+      {
+        onSuccess: () => {
+          setRejectingBookingId(null)
+          setRejectReason('')
+          notifySuccess('Booking rejected.')
+        },
+        onError: (error) => notifyError(error),
+      },
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -145,7 +191,7 @@ export function DashboardPage() {
               ? `${nextAppointment.child.firstName} ${nextAppointment.child.lastName}`
               : 'Nothing scheduled'
           }
-          href={ROUTES.bookings}
+          href={nextAppointment ? bookingReviewPath(nextAppointment.id) : ROUTES.bookings}
         />
       </section>
 
@@ -176,7 +222,7 @@ export function DashboardPage() {
                   {data.upcomingAppointments.map((appointment) => (
                     <Link
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
-                      to={ROUTES.bookings}
+                      to={bookingReviewPath(appointment.id)}
                       key={appointment.id}
                     >
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -294,26 +340,106 @@ export function DashboardPage() {
               </div>
             ) : pendingBookings.data && pendingBookings.data.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {pendingBookings.data.slice(0, 5).map((booking) => (
-                  <Link
-                    className="flex items-center gap-3 px-4 py-3 transition hover:bg-amber-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
-                    to={ROUTES.bookings}
-                    key={booking.id}
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-                      <Icon name="inbox" size={15} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-slate-800">
-                        {booking.child.firstName} {booking.child.lastName}
-                      </p>
-                      <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                        {formatDateTime(booking.requestedAt)}
-                      </p>
+                {pendingBookings.data.slice(0, 5).map((booking) => {
+                  const childName = `${booking.child.firstName} ${booking.child.lastName}`
+                  const awaitingParent = booking.proposals?.[0]?.status === 'PENDING'
+
+                  return (
+                    <div
+                      className="px-4 py-2.5 transition hover:bg-amber-50/40"
+                      key={booking.id}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Link
+                          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                          to={bookingReviewPath(booking.id)}
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                            <Icon name="inbox" size={14} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-teal-800">
+                              {childName}
+                            </span>
+                            <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                              {formatDateTime(booking.requestedAt)}
+                            </span>
+                          </span>
+                        </Link>
+                        <Badge tone="warning">Pending</Badge>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            title={
+                              awaitingParent
+                                ? 'Waiting for parent confirmation'
+                                : 'Approve booking'
+                            }
+                            aria-label={
+                              awaitingParent
+                                ? `Approve booking for ${childName} (awaiting parent)`
+                                : `Approve booking for ${childName}`
+                            }
+                            disabled={isMutatingBooking || awaitingParent}
+                            onClick={() => handleApprove(booking)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Icon name="check" size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Reject booking"
+                            aria-label={`Reject booking for ${childName}`}
+                            disabled={isMutatingBooking}
+                            onClick={() => {
+                              setRejectingBookingId((current) =>
+                                current === booking.id ? null : booking.id,
+                              )
+                              setRejectReason('')
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Icon name="close" size={13} />
+                          </button>
+                        </div>
+                      </div>
+                      {rejectingBookingId === booking.id ? (
+                        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50/60 p-1.5">
+                          <Input
+                            aria-label={`Rejection reason for ${childName}`}
+                            className="h-7 flex-1 px-2 text-[11px]"
+                            placeholder="Reason for rejection"
+                            value={rejectReason}
+                            disabled={rejectBooking.isPending}
+                            onChange={(event) => setRejectReason(event.target.value)}
+                          />
+                          <button
+                            type="button"
+                            title="Confirm rejection"
+                            aria-label="Confirm rejection"
+                            disabled={rejectBooking.isPending}
+                            onClick={() => handleReject(booking)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-600 text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Icon name="check" size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Cancel rejection"
+                            aria-label="Cancel rejection"
+                            onClick={() => {
+                              setRejectingBookingId(null)
+                              setRejectReason('')
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                          >
+                            <Icon name="close" size={12} />
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
-                    <Badge tone="warning">Pending</Badge>
-                  </Link>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="p-4">

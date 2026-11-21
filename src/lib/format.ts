@@ -4,17 +4,25 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 })
 
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
+  hour12: true,
 })
 
-const timeFormatter = new Intl.DateTimeFormat(undefined, {
+const timeFormatter = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
+  hour12: true,
+})
+
+const clockFormatter = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
 })
 
 const birthDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -51,6 +59,27 @@ export function formatTime(value: string | null | undefined): string {
 
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '—' : timeFormatter.format(date)
+}
+
+export function formatClockTime(value: string | null | undefined): string {
+  if (!value) {
+    return '—'
+  }
+
+  const [hours, minutes] = value.split(':').map(Number)
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return '—'
+  }
+
+  return clockFormatter.format(new Date(2026, 0, 1, hours, minutes))
 }
 
 export function formatBirthDate(value: string | null | undefined): string {

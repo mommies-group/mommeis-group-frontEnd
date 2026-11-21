@@ -20,7 +20,7 @@ import {
   formatDate,
   formatDateTime,
 } from '../lib/format'
-import { ROUTES, clinicalNotesPath } from '../router/routes'
+import { ROUTES } from '../router/routes'
 
 type RecordSectionProps = {
   title: string
@@ -95,15 +95,7 @@ export function PatientRecordPage() {
               <Icon name="arrow-left" size={14} />
               Patients
             </Link>
-            {record.data ? (
-              <Link
-                className={buttonStyles({ variant: 'primary', size: 'sm' })}
-                to={clinicalNotesPath(record.data.child.id)}
-              >
-                <Icon name="notes" size={14} />
-                New note
-              </Link>
-            ) : null}
+
           </>
         }
       />
@@ -354,15 +346,6 @@ export function PatientRecordPage() {
             icon="notes"
             source="specialist"
             wide
-            action={
-              <Link
-                className={buttonStyles({ variant: 'ghost', size: 'sm' })}
-                to={clinicalNotesPath(record.data.child.id)}
-              >
-                <Icon name="plus" size={12} />
-                Add
-              </Link>
-            }
           >
             {record.data.clinicalNotes.length > 0 ? (
               <div className="divide-y divide-slate-100">

@@ -40,6 +40,7 @@ export type AvailabilitySlotInput = {
 }
 
 export type AvailabilitySlotPatch = {
+  startTime?: string
   endTime?: string
   status?: AvailabilityStatus
 }

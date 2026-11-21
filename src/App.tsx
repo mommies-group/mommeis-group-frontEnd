@@ -6,7 +6,6 @@ import { useAuthToken } from './lib/auth-token'
 import { ActivitiesPage } from './pages/ActivitiesPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { BookingsPage } from './pages/BookingsPage'
-import { ClinicalNotesPage } from './pages/ClinicalNotesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -69,7 +68,6 @@ function App() {
           <Route path={ROUTES.bookings} element={<BookingsPage />} />
           <Route path={ROUTES.patients} element={<PatientsPage />} />
           <Route path={ROUTES.patientRecord} element={<PatientRecordPage />} />
-          <Route path={ROUTES.clinicalNotes} element={<ClinicalNotesPage />} />
           <Route path={ROUTES.activities} element={<ActivitiesPage />} />
           <Route path={ROUTES.privacy} element={<PrivacyPage />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -7,6 +7,8 @@ export const bookingStatusLabels: Record<BookingStatus, string> = {
   REJECTED: 'Rejected',
   RESCHEDULE_PENDING: 'Reschedule pending',
   COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  NO_SHOW: 'No show',
 }
 
 export const bookingStatusTones: Record<BookingStatus, BadgeTone> = {
@@ -15,6 +17,8 @@ export const bookingStatusTones: Record<BookingStatus, BadgeTone> = {
   REJECTED: 'danger',
   RESCHEDULE_PENDING: 'info',
   COMPLETED: 'neutral',
+  CANCELLED: 'neutral',
+  NO_SHOW: 'danger',
 }
 
 export const calendarDotClasses: Record<BookingStatus, string> = {
@@ -23,4 +27,6 @@ export const calendarDotClasses: Record<BookingStatus, string> = {
   REJECTED: 'bg-rose-500',
   RESCHEDULE_PENDING: 'bg-sky-500',
   COMPLETED: 'bg-slate-400',
+  CANCELLED: 'bg-slate-300',
+  NO_SHOW: 'bg-rose-400',
 }

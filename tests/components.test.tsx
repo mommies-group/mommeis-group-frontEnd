@@ -69,6 +69,14 @@ describe('BookingStatusBadge', () => {
     render(<BookingStatusBadge status="COMPLETED" />)
     expect(screen.getByText('Completed')).toBeInTheDocument()
   })
+
+  it('renders cancelled and no-show bookings', () => {
+    const { rerender } = render(<BookingStatusBadge status="CANCELLED" />)
+    expect(screen.getByText('Cancelled')).toBeInTheDocument()
+
+    rerender(<BookingStatusBadge status="NO_SHOW" />)
+    expect(screen.getByText('No show')).toBeInTheDocument()
+  })
 })
 
 describe('AuthStatusScreen', () => {

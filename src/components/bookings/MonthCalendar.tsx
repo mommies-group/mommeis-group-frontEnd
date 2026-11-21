@@ -236,6 +236,18 @@ export function MonthCalendar({
           <span className="h-2 w-2 rounded-full bg-slate-400" />
           Completed
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-rose-500" />
+          Rejected
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-slate-300" />
+          Cancelled
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-rose-400" />
+          No show
+        </span>
       </div>
     </div>
   )

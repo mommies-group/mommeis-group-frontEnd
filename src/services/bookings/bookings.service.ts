@@ -87,6 +87,13 @@ export async function completeBooking(
   return unwrapApiData(response)
 }
 
+export async function markBookingNoShow(id: string): Promise<Booking> {
+  const response = await apiClient.post<ApiSuccessResponse<Booking>>(
+    `/specialist/bookings/${encodeURIComponent(id)}/no-show`,
+  )
+  return unwrapApiData(response)
+}
+
 export async function getMeetingInfo(
   id: string,
   signal?: AbortSignal,

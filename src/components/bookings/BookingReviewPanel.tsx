@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ClinicalNoteModal } from '../notes/ClinicalNoteModal'
 import { Icon } from '../icons/Icon'
 import { ApiErrorNotice } from '../ui/ApiErrorNotice'
 import { Badge } from '../ui/Badge'
@@ -9,8 +10,8 @@ import { Field, Input, Textarea } from '../ui/Field'
 import { useBookingById } from '../../hooks/queries/bookings/bookings.queries'
 import {
   useApproveBooking,
-  useCompleteBooking,
   useMeetingInfo,
+  useMarkNoShow,
   useProposeAlternativeTime,
   useRejectBooking,
 } from '../../hooks/mutations/bookings/bookings.mutations'
@@ -20,7 +21,7 @@ import type { Booking, ProposalStatus } from '../../types/booking.types'
 import { BookingStatusBadge } from './bookingStatus'
 import { bookingStatusLabels } from './bookingStatusMeta'
 
-type Decision = 'approve' | 'reject' | 'propose' | 'complete'
+type Decision = 'approve' | 'reject' | 'propose'
 
 const proposalLabels: Record<ProposalStatus, string> = {
   PENDING: 'Awaiting parent',
@@ -43,22 +44,48 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   const approveBooking = useApproveBooking()
   const rejectBooking = useRejectBooking()
   const proposeTime = useProposeAlternativeTime()
-  const completeBooking = useCompleteBooking()
   const meetingInfo = useMeetingInfo()
+  const markNoShow = useMarkNoShow()
 
   const [decision, setDecision] = useState<Decision | null>(null)
   const [reason, setReason] = useState('')
   const [proposedDate, setProposedDate] = useState('')
   const [proposedTime, setProposedTime] = useState('')
   const [proposalNote, setProposalNote] = useState('')
-  const [completionNote, setCompletionNote] = useState('')
+  const [notesOpen, setNotesOpen] = useState(false)
 
   const current = bookingDetail.data ?? booking
+  const [now, setNow] = useState(() => Date.now())
+  const scheduledAtMs = current?.scheduledAt
+    ? new Date(current.scheduledAt).getTime()
+    : null
+
+  useEffect(() => {
+    if (
+      !scheduledAtMs ||
+      !Number.isFinite(scheduledAtMs) ||
+      scheduledAtMs <= Date.now()
+    ) {
+      return
+    }
+
+    const timer = window.setTimeout(
+      () => setNow(Date.now()),
+      scheduledAtMs - Date.now() + 1000,
+    )
+
+    return () => window.clearTimeout(timer)
+  }, [scheduledAtMs])
+
+  const isAppointmentTime =
+    scheduledAtMs !== null &&
+    Number.isFinite(scheduledAtMs) &&
+    now >= scheduledAtMs
   const isPending =
     approveBooking.isPending ||
     rejectBooking.isPending ||
     proposeTime.isPending ||
-    completeBooking.isPending
+    markNoShow.isPending
 
   if (!current) {
     return (
@@ -78,20 +105,18 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
 
   const canDecide =
     current.status === 'PENDING' || current.status === 'RESCHEDULE_PENDING'
-  const canPropose = [
-    'PENDING',
-    'CONFIRMED',
-    'RESCHEDULE_PENDING',
-  ].includes(current.status)
+  const canPropose =
+    current.status === 'PENDING' || current.status === 'RESCHEDULE_PENDING'
   const canComplete = current.status === 'CONFIRMED'
+  const canMeet = current.status === 'CONFIRMED'
   const latestProposal = current.proposals[0]
+  const awaitingParentConfirmation = latestProposal?.status === 'PENDING'
 
   const resetDecision = () => {
     setDecision(null)
     approveBooking.reset()
     rejectBooking.reset()
     proposeTime.reset()
-    completeBooking.reset()
   }
 
   const handleApprove = () => {
@@ -157,21 +182,14 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     )
   }
 
-  const handleComplete = () => {
-    completeBooking.mutate(
-      {
-        id: current.id,
-        payload: { note: completionNote.trim() || undefined },
+  const handleNoShow = () => {
+    markNoShow.mutate(current.id, {
+      onSuccess: () => {
+        resetDecision()
+        notifySuccess('Marked as no show.')
       },
-      {
-        onSuccess: () => {
-          setDecision(null)
-          setCompletionNote('')
-          notifySuccess('Session completed.')
-        },
-        onError: (error) => notifyError(error),
-      },
-    )
+      onError: (error) => notifyError(error),
+    })
   }
 
   const handleMeeting = () => {
@@ -188,9 +206,10 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Review"
+    <>
+      <Card>
+        <CardHeader
+          title="Review"
         action={<BookingStatusBadge status={current.status} />}
       />
       <CardBody>
@@ -261,13 +280,20 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         </div>
 
         {latestProposal ? (
-          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2">
-            <p className="text-[11px] font-semibold text-sky-950">
-              {formatDateTime(latestProposal.proposedAt)}
-            </p>
-            <Badge tone={proposalTones[latestProposal.status]}>
-              {proposalLabels[latestProposal.status]}
-            </Badge>
+          <div className="mt-2.5 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-sky-950">
+                {formatDateTime(latestProposal.proposedAt)}
+              </p>
+              <Badge tone={proposalTones[latestProposal.status]}>
+                {proposalLabels[latestProposal.status]}
+              </Badge>
+            </div>
+            {awaitingParentConfirmation ? (
+              <p className="mt-1 text-[10px] text-sky-900">
+                Approve is enabled once the parent confirms this time.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -283,6 +309,13 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           </div>
         ) : null}
 
+        {canComplete && !isAppointmentTime && current.scheduledAt ? (
+          <p className="mt-3 text-[10px] font-medium text-slate-500">
+            Actions unlock at the scheduled time ·{' '}
+            {formatDateTime(current.scheduledAt)}
+          </p>
+        ) : null}
+
         <div className="mt-3 flex flex-wrap gap-1.5">
           {canDecide ? (
             <>
@@ -293,7 +326,12 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
                   resetDecision()
                   setDecision('approve')
                 }}
-                disabled={isPending}
+                disabled={isPending || awaitingParentConfirmation}
+                title={
+                  awaitingParentConfirmation
+                    ? 'Waiting for parent confirmation'
+                    : undefined
+                }
               >
                 <Icon name="check" size={13} />
                 Approve
@@ -332,24 +370,53 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               size="sm"
               onClick={() => {
                 resetDecision()
-                setDecision('complete')
+                setNotesOpen(true)
               }}
-              disabled={isPending}
+              disabled={isPending || !isAppointmentTime}
+              title={
+                isAppointmentTime
+                  ? undefined
+                  : 'Available at the scheduled time'
+              }
             >
               <Icon name="check" size={13} />
               Complete
             </Button>
           ) : null}
-          <Button
-            variant="soft"
-            size="sm"
-            onClick={handleMeeting}
-            disabled={meetingInfo.isPending}
-            aria-busy={meetingInfo.isPending}
-          >
-            <Icon name="video" size={13} />
-            {meetingInfo.isPending ? 'Opening…' : 'Meeting'}
-          </Button>
+          {canMeet ? (
+            <Button
+              variant="soft"
+              size="sm"
+              onClick={handleMeeting}
+              disabled={meetingInfo.isPending || !isAppointmentTime}
+              aria-busy={meetingInfo.isPending}
+              title={
+                isAppointmentTime
+                  ? undefined
+                  : 'Available at the scheduled time'
+              }
+            >
+              <Icon name="video" size={13} />
+              {meetingInfo.isPending ? 'Opening…' : 'Meeting'}
+            </Button>
+          ) : null}
+          {canMeet ? (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleNoShow}
+              disabled={isPending || !isAppointmentTime}
+              aria-busy={markNoShow.isPending}
+              title={
+                isAppointmentTime
+                  ? undefined
+                  : 'Available at the scheduled time'
+              }
+            >
+              <Icon name="close" size={13} />
+              No show
+            </Button>
+          ) : null}
         </div>
 
         {decision === 'approve' ? (
@@ -462,40 +529,21 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           </div>
         ) : null}
 
-        {decision === 'complete' ? (
-          <div className="mt-3 grid gap-2 rounded-lg border border-teal-200 bg-teal-50/60 p-2.5">
-            <Field label="Completion note" htmlFor="completion-note" optional>
-              <Textarea
-                id="completion-note"
-                value={completionNote}
-                disabled={isPending}
-                onChange={(event) => setCompletionNote(event.target.value)}
-                placeholder="Session summary"
-                rows={2}
-              />
-            </Field>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetDecision}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleComplete}
-                disabled={isPending}
-                aria-busy={completeBooking.isPending}
-              >
-                {completeBooking.isPending ? 'Completing…' : 'Complete session'}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </CardBody>
-    </Card>
+        </CardBody>
+      </Card>
+      {notesOpen ? (
+        <ClinicalNoteModal
+          key={current.id}
+          open
+          childId={current.childId}
+          bookingId={current.id}
+          completeBookingId={current.id}
+          onClose={() => setNotesOpen(false)}
+          onCompleted={() => {
+            void bookingDetail.refetch()
+          }}
+        />
+      ) : null}
+    </>
   )
 }

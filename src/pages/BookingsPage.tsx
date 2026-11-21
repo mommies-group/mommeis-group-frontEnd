@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
 import { BookingReviewPanel } from '../components/bookings/BookingReviewPanel'
 import { BookingStatusBadge } from '../components/bookings/bookingStatus'
@@ -14,7 +14,10 @@ import { Select } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useCalendar } from '../hooks/queries/calendar/calendar.queries'
-import { useBookings } from '../hooks/queries/bookings/bookings.queries'
+import {
+  useBookingById,
+  useBookings,
+} from '../hooks/queries/bookings/bookings.queries'
 import { formatDateTime, monthRange, toDateKey } from '../lib/format'
 import { BOOKING_STATUSES, type BookingStatus } from '../types/booking.types'
 import { ROUTES } from '../router/routes'
@@ -22,21 +25,38 @@ import { ROUTES } from '../router/routes'
 type StatusFilter = 'ALL' | BookingStatus
 
 export function BookingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
-    null,
-  )
   const [monthOffset, setMonthOffset] = useState(0)
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
+  const reviewRef = useRef<HTMLDivElement>(null)
+  const hasScrolledToLinkedBooking = useRef(false)
   const range = monthRange(monthOffset)
 
+  const selectedBookingId = searchParams.get('bookingId')
   const bookings = useBookings(
     statusFilter === 'ALL' ? undefined : statusFilter,
   )
   const calendar = useCalendar(range.from, range.to)
+  const linkedBooking = useBookingById(selectedBookingId)
 
   const selectedBooking =
-    bookings.data?.find((booking) => booking.id === selectedBookingId) ?? null
+    bookings.data?.find((booking) => booking.id === selectedBookingId) ??
+    linkedBooking.data ??
+    null
+
+  useEffect(() => {
+    if (!selectedBookingId || hasScrolledToLinkedBooking.current) {
+      return
+    }
+
+    hasScrolledToLinkedBooking.current = true
+    const scrollTimer = window.setTimeout(() => {
+      reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+
+    return () => window.clearTimeout(scrollTimer)
+  }, [selectedBookingId])
 
   const allEvents = useMemo(() => calendar.data?.events ?? [], [calendar.data])
   const sortedEvents = useMemo(() => {
@@ -60,9 +80,21 @@ export function BookingsPage() {
       })
     : null
 
+  const selectBooking = (bookingId: string | null) => {
+    const next = new URLSearchParams(searchParams)
+
+    if (bookingId) {
+      next.set('bookingId', bookingId)
+    } else {
+      next.delete('bookingId')
+    }
+
+    setSearchParams(next, { replace: true })
+  }
+
   const handleStatusChange = (value: StatusFilter) => {
     setStatusFilter(value)
-    setSelectedBookingId(null)
+    selectBooking(null)
   }
 
   const handleMonthOffsetChange = (next: number) => {
@@ -148,7 +180,7 @@ export function BookingsPage() {
                     type="button"
                     className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
                     key={event.id}
-                    onClick={() => setSelectedBookingId(event.id)}
+                    onClick={() => selectBooking(event.id)}
                   >
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
                       <Icon name="calendar" size={14} />
@@ -236,7 +268,7 @@ export function BookingsPage() {
                       }`}
                       key={booking.id}
                       aria-pressed={selected}
-                      onClick={() => setSelectedBookingId(booking.id)}
+                      onClick={() => selectBooking(booking.id)}
                     >
                       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
                         <Icon name="inbox" size={15} />
@@ -285,10 +317,12 @@ export function BookingsPage() {
           </CardBody>
         </Card>
 
-        <BookingReviewPanel
-          key={selectedBooking?.id ?? 'no-booking'}
-          booking={selectedBooking}
-        />
+        <div ref={reviewRef} className="min-w-0 scroll-mt-24">
+          <BookingReviewPanel
+            key={selectedBooking?.id ?? 'no-booking'}
+            booking={selectedBooking}
+          />
+        </div>
       </div>
     </div>
   )

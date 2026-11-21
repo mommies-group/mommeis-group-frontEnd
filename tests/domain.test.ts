@@ -5,6 +5,7 @@ import {
 } from '../src/components/bookings/bookingStatusMeta'
 import {
   formatBirthDate,
+  formatClockTime,
   formatDate,
   formatDateTime,
   initials,
@@ -22,7 +23,6 @@ import {
 } from '../src/types/activity.types'
 import {
   ROUTES,
-  clinicalNotesPath,
   getPageTitle,
   isNavActive,
   patientRecordPath,
@@ -51,6 +51,17 @@ describe('format helpers', () => {
     expect(formatDate(null)).toBe('Not provided')
     expect(formatDateTime(null)).toBe('Not scheduled')
     expect(formatBirthDate(undefined)).toBe('Not provided')
+  })
+
+  it('formats clock times on a 12-hour clock with AM/PM', () => {
+    expect(formatClockTime('09:00')).toMatch(/9:00\s?AM/)
+    expect(formatClockTime('13:00')).toMatch(/1:00\s?PM/)
+    expect(formatClockTime('00:30')).toMatch(/12:30\s?AM/)
+    expect(formatClockTime('')).toBe('—')
+  })
+
+  it('formats date-times on a 12-hour clock with AM/PM', () => {
+    expect(formatDateTime('2026-12-01T13:00:00')).toMatch(/1:00\s?PM/)
   })
 
   it('formats initials and date keys', () => {
@@ -85,6 +96,13 @@ describe('booking status metadata', () => {
     expect(bookingStatusLabels[status]).toBe('Completed')
     expect(bookingStatusTones[status]).toBe('neutral')
   })
+
+  it('includes cancelled and no-show in the filter options', () => {
+    expect(BOOKING_STATUSES).toContain('CANCELLED')
+    expect(BOOKING_STATUSES).toContain('NO_SHOW')
+    expect(bookingStatusLabels.CANCELLED).toBe('Cancelled')
+    expect(bookingStatusLabels.NO_SHOW).toBe('No show')
+  })
 })
 
 describe('activity status', () => {
@@ -109,8 +127,6 @@ describe('route helpers', () => {
 
   it('builds query-string paths for patient context', () => {
     expect(patientRecordPath('child-1')).toBe('/patients/record?childId=child-1')
-    expect(clinicalNotesPath()).toBe('/clinical-notes')
-    expect(clinicalNotesPath('child-1')).toBe('/clinical-notes?childId=child-1')
   })
 
   it('marks patient records as part of the patients nav item', () => {

@@ -8,7 +8,6 @@ export const ROUTES = {
   bookings: '/bookings',
   patients: '/patients',
   patientRecord: '/patients/record',
-  clinicalNotes: '/clinical-notes',
   activities: '/activities',
   privacy: '/privacy',
 } as const
@@ -39,11 +38,6 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       { label: 'Availability', path: ROUTES.availability, icon: 'clock' },
       { label: 'My Patients', path: ROUTES.patients, icon: 'users' },
-      {
-        label: 'Clinical Notes',
-        path: ROUTES.clinicalNotes,
-        icon: 'notes',
-      },
       { label: 'Activities', path: ROUTES.activities, icon: 'activity' },
     ],
   },
@@ -72,7 +66,6 @@ const titles: Record<string, string> = {
   [ROUTES.bookings]: 'Bookings & Schedule',
   [ROUTES.patients]: 'My Patients',
   [ROUTES.patientRecord]: 'Patient Clinical Record',
-  [ROUTES.clinicalNotes]: 'Clinical Notes',
   [ROUTES.activities]: 'Activities',
   [ROUTES.privacy]: 'Privacy',
 }
@@ -81,16 +74,12 @@ export function getPageTitle(path: string): string {
   return titles[path] ?? 'Page not found'
 }
 
-export function patientRecordPath(childId: string): string {
-  return `${ROUTES.patientRecord}?childId=${encodeURIComponent(childId)}`
+export function bookingReviewPath(bookingId: string): string {
+  return `${ROUTES.bookings}?bookingId=${encodeURIComponent(bookingId)}`
 }
 
-export function clinicalNotesPath(childId?: string): string {
-  if (!childId) {
-    return ROUTES.clinicalNotes
-  }
-
-  return `${ROUTES.clinicalNotes}?childId=${encodeURIComponent(childId)}`
+export function patientRecordPath(childId: string): string {
+  return `${ROUTES.patientRecord}?childId=${encodeURIComponent(childId)}`
 }
 
 export function isNavActive(itemPath: string, currentPath: string): boolean {

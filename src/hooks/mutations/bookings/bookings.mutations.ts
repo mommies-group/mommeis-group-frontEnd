@@ -4,6 +4,7 @@ import {
   approveBooking,
   completeBooking,
   getMeetingInfo,
+  markBookingNoShow,
   proposeAlternativeTime,
   rejectBooking,
 } from '../../../services/bookings/bookings.service'
@@ -75,6 +76,15 @@ export function useCompleteBooking() {
       id: string
       payload: CompleteBookingRequest
     }) => completeBooking(id, payload),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMarkNoShow() {
+  const invalidate = useInvalidateBookingQueries()
+
+  return useMutation({
+    mutationFn: (id: string) => markBookingNoShow(id),
     onSuccess: invalidate,
   })
 }

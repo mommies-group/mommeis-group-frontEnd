@@ -4,6 +4,8 @@ export type BookingStatus =
   | 'REJECTED'
   | 'RESCHEDULE_PENDING'
   | 'COMPLETED'
+  | 'CANCELLED'
+  | 'NO_SHOW'
 
 export type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED'
 
@@ -91,4 +93,6 @@ export const BOOKING_STATUSES: BookingStatus[] = [
   'RESCHEDULE_PENDING',
   'COMPLETED',
   'REJECTED',
+  'CANCELLED',
+  'NO_SHOW',
 ]

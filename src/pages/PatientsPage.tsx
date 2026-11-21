@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ClinicalNoteModal } from '../components/notes/ClinicalNoteModal'
 import { Icon } from '../components/icons/Icon'
 import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
 import { Badge } from '../components/ui/Badge'
+import { Button } from '../components/ui/Button'
 import { buttonStyles } from '../components/ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -11,11 +13,12 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
 import { usePatients } from '../hooks/queries/patients/patients.queries'
 import { formatBirthDate, initials } from '../lib/format'
-import { clinicalNotesPath, patientRecordPath } from '../router/routes'
+import { patientRecordPath } from '../router/routes'
 
 export function PatientsPage() {
   const patients = usePatients()
   const [search, setSearch] = useState('')
+  const [notesChildId, setNotesChildId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -38,16 +41,7 @@ export function PatientsPage() {
         title="My Patients"
         icon="users"
         actions={
-          <>
-            <Badge tone="neutral">{patients.data?.length ?? 0} patients</Badge>
-            <Link
-              className={buttonStyles({ variant: 'secondary', size: 'sm' })}
-              to={clinicalNotesPath()}
-            >
-              <Icon name="notes" size={14} />
-              Notes
-            </Link>
-          </>
+          <Badge tone="neutral">{patients.data?.length ?? 0} patients</Badge>
         }
       />
 
@@ -188,16 +182,14 @@ export function PatientsPage() {
                               <Icon name="id-card" size={12} />
                               Record
                             </Link>
-                            <Link
-                              className={buttonStyles({
-                                variant: 'ghost',
-                                size: 'sm',
-                              })}
-                              to={clinicalNotesPath(patient.id)}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setNotesChildId(patient.id)}
                             >
                               <Icon name="notes" size={12} />
                               Notes
-                            </Link>
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -223,6 +215,15 @@ export function PatientsPage() {
           )}
         </CardBody>
       </Card>
+
+      {notesChildId ? (
+        <ClinicalNoteModal
+          key={notesChildId}
+          open
+          childId={notesChildId}
+          onClose={() => setNotesChildId(null)}
+        />
+      ) : null}
     </div>
   )
 }
