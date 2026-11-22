@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ClinicalNoteModal } from '../components/notes/ClinicalNoteModal'
 import { Icon } from '../components/icons/Icon'
@@ -17,10 +17,17 @@ import { usePagination } from '../hooks/use-pagination'
 import { formatBirthDate, initials } from '../lib/format'
 import { patientRecordPath } from '../router/routes'
 
+const PatientTreatmentModal = lazy(() =>
+  import('../components/treatment-plans/PatientTreatmentModal').then(
+    (module) => ({ default: module.PatientTreatmentModal }),
+  ),
+)
+
 export function PatientsPage() {
   const patients = usePatients()
   const [search, setSearch] = useState('')
   const [notesChildId, setNotesChildId] = useState<string | null>(null)
+  const [treatmentChildId, setTreatmentChildId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -79,31 +86,31 @@ export function PatientsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th
-                      className="whitespace-nowrap border-b border-slate-200 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Child
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-200 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Date of birth
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-200 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Parent
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-200 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Access
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-200 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Actions
@@ -114,22 +121,22 @@ export function PatientsPage() {
                   {patients.isLoading ? (
                     [0, 1, 2].map((row) => (
                       <tr key={row}>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             <Skeleton className="h-8 w-8 rounded-full" />
                             <Skeleton className="h-3 w-32" />
                           </div>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <Skeleton className="h-3 w-24" />
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <Skeleton className="h-3 w-32" />
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <Skeleton className="h-5 w-16 rounded-full" />
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <Skeleton className="h-8 w-28 rounded-lg" />
                         </td>
                       </tr>
@@ -140,7 +147,7 @@ export function PatientsPage() {
                         className="transition hover:bg-slate-50/70"
                         key={patient.id}
                       >
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-[10px] font-bold text-teal-800">
                               {initials(
@@ -158,10 +165,10 @@ export function PatientsPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3 text-xs text-slate-600">
+                        <td className="border-b border-slate-200 px-4 py-3 text-xs text-slate-600">
                           {formatBirthDate(patient.dateOfBirth)}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <p className="text-xs font-medium text-slate-800">
                             {patient.parent.fullName}
                           </p>
@@ -169,12 +176,12 @@ export function PatientsPage() {
                             {patient.parent.email ?? '—'}
                           </p>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <Badge tone="success" dot>
                             Eligible
                           </Badge>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-3">
+                        <td className="border-b border-slate-200 px-4 py-3">
                           <div className="flex flex-wrap gap-1.5">
                             <Link
                               className={buttonStyles({
@@ -193,6 +200,14 @@ export function PatientsPage() {
                             >
                               <Icon name="notes" size={12} />
                               Notes
+                            </Button>
+                            <Button
+                              variant="soft"
+                              size="sm"
+                              onClick={() => setTreatmentChildId(patient.id)}
+                            >
+                              <Icon name="file" size={12} />
+                              View treatment
                             </Button>
                           </div>
                         </td>
@@ -236,6 +251,17 @@ export function PatientsPage() {
           childId={notesChildId}
           onClose={() => setNotesChildId(null)}
         />
+      ) : null}
+
+      {treatmentChildId ? (
+        <Suspense fallback={null}>
+          <PatientTreatmentModal
+            key={treatmentChildId}
+            open
+            childId={treatmentChildId}
+            onClose={() => setTreatmentChildId(null)}
+          />
+        </Suspense>
       ) : null}
     </div>
   )

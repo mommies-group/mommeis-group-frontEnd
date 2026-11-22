@@ -28,10 +28,17 @@ export const queryKeys = {
     details: () => [...queryKeys.patients.all, 'detail'] as const,
     detail: (childId: string) =>
       [...queryKeys.patients.details(), childId] as const,
+    records: () => [...queryKeys.patients.all, 'record'] as const,
     record: (childId: string) =>
-      [...queryKeys.patients.all, 'record', childId] as const,
+      [...queryKeys.patients.records(), childId] as const,
+    notesAll: ['patients', 'notes'] as const,
     notes: (childId: string) =>
       [...queryKeys.patients.all, 'notes', childId] as const,
+  },
+  clinicalNotes: {
+    all: ['clinical-notes'] as const,
+    detail: (noteId: string) =>
+      [...queryKeys.clinicalNotes.all, 'detail', noteId] as const,
   },
   activityCatalog: {
     all: ['activity-catalog'] as const,
@@ -68,5 +75,20 @@ export const queryKeys = {
   availability: {
     all: ['availability'] as const,
     detail: ['availability', 'detail'] as const,
+  },
+  treatmentPlans: {
+    all: ['treatment-plans'] as const,
+    lists: () => [...queryKeys.treatmentPlans.all, 'list'] as const,
+    list: (page: number, limit: number) =>
+      [...queryKeys.treatmentPlans.lists(), page, limit] as const,
+    details: () => [...queryKeys.treatmentPlans.all, 'detail'] as const,
+    detail: (planId: string) =>
+      [...queryKeys.treatmentPlans.details(), planId] as const,
+    sessions: (planId: string) =>
+      [...queryKeys.treatmentPlans.detail(planId), 'sessions'] as const,
+    session: (planId: string, sessionId: string) =>
+      [...queryKeys.treatmentPlans.sessions(planId), sessionId] as const,
+    invoice: (planId: string) =>
+      [...queryKeys.treatmentPlans.detail(planId), 'invoice'] as const,
   },
 } as const

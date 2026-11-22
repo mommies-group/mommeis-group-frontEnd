@@ -187,7 +187,7 @@ export function BookingsPage() {
                 />
               </div>
             ) : sortedEvents.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-200">
                 {schedulePager.visibleItems.map((event) => (
                   <button
                     type="button"
@@ -278,7 +278,7 @@ export function BookingsPage() {
                 />
               </div>
             ) : bookings.data && bookings.data.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-200">
                 {bookingsPager.visibleItems.map((booking) => {
                   const selected = booking.id === selectedBookingId
                   return (

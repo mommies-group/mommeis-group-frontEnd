@@ -319,7 +319,7 @@ export function ActivitiesPage() {
                 />
               </div>
             ) : activitiesList.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-200">
                 {pager.visibleItems.map((activity) => (
                   <article className="p-4" key={activity.id}>
                     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -576,7 +576,7 @@ export function ActivitiesPage() {
                 </Field>
               </div>
             </CardBody>
-            <div className="flex items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+            <div className="flex items-center gap-2 border-t border-slate-300 bg-slate-50/60 px-5 py-3">
               {editingActivity ? (
                 <Button
                   disabled={isBusy}

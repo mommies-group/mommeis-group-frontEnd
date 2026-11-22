@@ -28,6 +28,7 @@ jest.mock('../src/hooks/queries/patients/patients.queries', () => ({
 
 jest.mock('../src/hooks/queries/clinical-notes/clinical-notes.queries', () => ({
   useClinicalNotes: () => ({ data: [], isLoading: false, isError: false }),
+  useClinicalNote: () => ({ data: null, isLoading: false, isError: false }),
 }))
 
 jest.mock(
@@ -56,6 +57,16 @@ jest.mock('../src/hooks/queries/bookings/bookings.queries', () => ({
 jest.mock('../src/hooks/mutations/clinical-notes/clinical-notes.mutations', () => ({
   useCreateClinicalNote: () => ({
     mutate: mockCreateNote,
+    isPending: false,
+    reset: jest.fn(),
+  }),
+  useUpdateClinicalNote: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+    reset: jest.fn(),
+  }),
+  useDeleteClinicalNote: () => ({
+    mutate: jest.fn(),
     isPending: false,
     reset: jest.fn(),
   }),

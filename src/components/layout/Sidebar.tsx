@@ -24,13 +24,13 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-[min(300px,86vw)] flex-col border-r border-slate-200 bg-white shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-[min(300px,86vw)] flex-col border-r border-slate-300 bg-white shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
       aria-label="Main navigation"
     >
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 lg:h-[68px]">
+        <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-300 px-4 lg:h-[68px]">
           <Link
             to={ROUTES.dashboard}
             onClick={onClose}
@@ -89,8 +89,8 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="shrink-0 border-t border-slate-200 p-3">
-          <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+        <div className="shrink-0 border-t border-slate-300 p-3">
+          <div className="flex items-center gap-2.5 rounded-xl border border-slate-300 bg-slate-50/70 p-2.5">
             <Avatar
               size="sm"
               label="Signed-in specialist"

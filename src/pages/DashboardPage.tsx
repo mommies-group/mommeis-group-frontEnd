@@ -34,7 +34,7 @@ type SummaryCardProps = {
 function SummaryCard({ label, icon, value, hint, href }: SummaryCardProps) {
   return (
     <Link
-      className="group flex min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+      className="group flex min-w-0 flex-col rounded-xl border border-slate-300 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
       to={href}
     >
       <div className="flex items-center justify-between gap-2">
@@ -235,7 +235,7 @@ export function DashboardPage() {
                   ))}
                 </div>
               ) : data && data.upcomingAppointments.length > 0 ? (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-200">
                   {upcomingPager.visibleItems.map((appointment) => (
                     <Link
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
@@ -301,7 +301,7 @@ export function DashboardPage() {
                   ))}
                 </div>
               ) : data && data.recentActivities.length > 0 ? (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-200">
                   {activityPager.visibleItems.map((activity) => (
                     <div
                       className="flex items-center gap-3 px-4 py-2.5"
@@ -376,7 +376,7 @@ export function DashboardPage() {
                 />
               </div>
             ) : pendingBookings.data && pendingBookings.data.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-200">
                 {pendingPager.visibleItems.map((booking) => {
                   const childName = `${booking.child.firstName} ${booking.child.lastName}`
                   const awaitingParent = booking.proposals?.[0]?.status === 'PENDING'
@@ -468,7 +468,7 @@ export function DashboardPage() {
                               setRejectingBookingId(null)
                               setRejectReason('')
                             }}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
                           >
                             <Icon name="close" size={12} />
                           </button>

@@ -259,8 +259,8 @@ export function ProfilePage() {
                   }
                 />
                 <CardBody>
-                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-300">
                       <Icon name="shield" size={14} />
                     </span>
                     <div className="min-w-0">
@@ -278,8 +278,8 @@ export function ProfilePage() {
               <Card>
                 <CardHeader title="Practice" />
                 <CardBody>
-                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-300">
                       <Icon name="briefcase" size={14} />
                     </span>
                     <div className="min-w-0">
@@ -471,7 +471,7 @@ export function ProfilePage() {
                       </div>
                     ) : null}
                   </CardBody>
-                  <div className="flex justify-end border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+                  <div className="flex justify-end border-t border-slate-300 bg-slate-50/60 px-5 py-3">
                     <Button
                       aria-busy={updatePricing.isPending}
                       disabled={

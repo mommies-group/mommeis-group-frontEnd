@@ -7,7 +7,7 @@ import type {
 import { Icon } from '../icons/Icon'
 
 const controlClasses =
-  'block w-full min-w-0 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 shadow-sm transition placeholder:text-slate-500 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
+  'block w-full min-w-0 rounded-lg border border-slate-400 bg-white text-sm text-slate-900 shadow-sm transition placeholder:text-slate-500 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
 
 type FieldProps = {
   label: ReactNode

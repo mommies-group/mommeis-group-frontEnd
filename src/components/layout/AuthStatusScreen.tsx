@@ -25,7 +25,7 @@ export function AuthStatusScreen({
           <Logo />
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+        <section className="rounded-2xl border border-slate-300 bg-white p-6 text-center shadow-sm">
           {mode === 'loading' ? (
             <>
               <span

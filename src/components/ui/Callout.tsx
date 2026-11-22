@@ -24,7 +24,7 @@ const toneClasses: Record<CalloutTone, string> = {
   success: 'border-emerald-200 bg-emerald-50/80 text-emerald-950',
   warning: 'border-amber-200 bg-amber-50/80 text-amber-950',
   danger: 'border-rose-200 bg-rose-50/80 text-rose-950',
-  neutral: 'border-slate-200 bg-slate-50 text-slate-800',
+  neutral: 'border-slate-300 bg-slate-50 text-slate-800',
 }
 
 const iconClasses: Record<CalloutTone, string> = {

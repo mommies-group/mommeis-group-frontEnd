@@ -11,10 +11,10 @@ type TopbarProps = {
 
 export function Topbar({ title, onMenu, menuOpen }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md lg:h-[68px] lg:px-8">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-300 bg-white/90 px-4 backdrop-blur-md lg:h-[68px] lg:px-8">
       <button
         type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 lg:hidden"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 lg:hidden"
         aria-label="Open navigation"
         aria-expanded={menuOpen}
         onClick={onMenu}

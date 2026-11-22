@@ -10,7 +10,7 @@ export function Card({ children, className = '', as = 'section' }: CardProps) {
   const Tag = as
   return (
     <Tag
-      className={`min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`.trim()}
+      className={`min-w-0 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm ${className}`.trim()}
     >
       {children}
     </Tag>
@@ -31,7 +31,7 @@ export function CardHeader({
   id,
 }: CardHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-3 border-b border-slate-300 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h2
           className="text-sm font-semibold tracking-tight text-slate-900"
@@ -66,7 +66,7 @@ export function CardBody({
 
 export function CardFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+    <div className="flex flex-wrap items-center gap-2 border-t border-slate-300 bg-slate-50/60 px-5 py-3">
       {children}
     </div>
   )

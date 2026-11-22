@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ClinicalNoteModal } from '../notes/ClinicalNoteModal'
 import { Icon } from '../icons/Icon'
 import { ApiErrorNotice } from '../ui/ApiErrorNotice'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { buttonStyles } from '../ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Field, Input, Textarea } from '../ui/Field'
@@ -20,6 +22,7 @@ import { formatDateTime, toDateKey, toDateTimeIso } from '../../lib/format'
 import type { Booking, ProposalStatus } from '../../types/booking.types'
 import { BookingStatusBadge } from './bookingStatus'
 import { bookingStatusLabels } from './bookingStatusMeta'
+import { treatmentPlansCreatePath } from '../../router/routes'
 
 type Decision = 'approve' | 'reject' | 'propose'
 
@@ -213,7 +216,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         action={<BookingStatusBadge status={current.status} />}
       />
       <CardBody>
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+        <div className="rounded-xl border border-slate-300 bg-slate-50/60 p-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">
@@ -229,7 +232,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
             </Badge>
           </div>
 
-          <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3">
+          <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-300 pt-3">
             <div>
               <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
                 Requested
@@ -416,6 +419,15 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               <Icon name="close" size={13} />
               No show
             </Button>
+          ) : null}
+          {current.status === 'COMPLETED' ? (
+            <Link
+              className={buttonStyles({ variant: 'soft', size: 'sm' })}
+              to={treatmentPlansCreatePath(current.childId, current.id)}
+            >
+              <Icon name="file" size={13} />
+              Create treatment plan
+            </Link>
           ) : null}
         </div>
 

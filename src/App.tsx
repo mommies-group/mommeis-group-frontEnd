@@ -12,6 +12,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { PatientRecordPage } from './pages/PatientRecordPage'
 import { PatientsPage } from './pages/PatientsPage'
 import { PrivacyPage } from './pages/PrivacyPage'
+import { TreatmentPlansPage } from './pages/TreatmentPlansPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { toasterOptions } from './lib/toast'
 import { ROUTES, getPageTitle } from './router/routes'
@@ -69,6 +70,7 @@ function App() {
           <Route path={ROUTES.patients} element={<PatientsPage />} />
           <Route path={ROUTES.patientRecord} element={<PatientRecordPage />} />
           <Route path={ROUTES.activities} element={<ActivitiesPage />} />
+          <Route path={ROUTES.treatmentPlans} element={<TreatmentPlansPage />} />
           <Route path={ROUTES.privacy} element={<PrivacyPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

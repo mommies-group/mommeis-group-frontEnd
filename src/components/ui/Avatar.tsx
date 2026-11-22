@@ -17,7 +17,7 @@ export function Avatar({ size = 'md', label, src }: AvatarProps) {
     return (
       <img
         alt={label ?? 'Avatar'}
-        className={`shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover ${sizeClasses[size]}`}
+        className={`shrink-0 rounded-full border border-slate-300 bg-slate-100 object-cover object-center ${sizeClasses[size]}`}
         src={src}
       />
     )
@@ -25,7 +25,7 @@ export function Avatar({ size = 'md', label, src }: AvatarProps) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 ${sizeClasses[size]}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-slate-500 ${sizeClasses[size]}`}
       role={label ? 'img' : undefined}
       aria-label={label}
     >

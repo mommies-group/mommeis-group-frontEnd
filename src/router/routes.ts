@@ -9,6 +9,7 @@ export const ROUTES = {
   patients: '/patients',
   patientRecord: '/patients/record',
   activities: '/activities',
+  treatmentPlans: '/treatment-plans',
   privacy: '/privacy',
 } as const
 
@@ -39,6 +40,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Availability', path: ROUTES.availability, icon: 'clock' },
       { label: 'My Patients', path: ROUTES.patients, icon: 'users' },
       { label: 'Activities', path: ROUTES.activities, icon: 'activity' },
+      {
+        label: 'Treatment Plans',
+        path: ROUTES.treatmentPlans,
+        icon: 'file',
+      },
     ],
   },
   {
@@ -67,6 +73,7 @@ const titles: Record<string, string> = {
   [ROUTES.patients]: 'My Patients',
   [ROUTES.patientRecord]: 'Patient Clinical Record',
   [ROUTES.activities]: 'Activity library',
+  [ROUTES.treatmentPlans]: 'Treatment Plans',
   [ROUTES.privacy]: 'Privacy',
 }
 
@@ -80,6 +87,17 @@ export function bookingReviewPath(bookingId: string): string {
 
 export function patientRecordPath(childId: string): string {
   return `${ROUTES.patientRecord}?childId=${encodeURIComponent(childId)}`
+}
+
+export function treatmentPlansCreatePath(
+  childId: string,
+  bookingId?: string | null,
+): string {
+  const params = new URLSearchParams({ childId })
+  if (bookingId) {
+    params.set('bookingId', bookingId)
+  }
+  return `${ROUTES.treatmentPlans}?create=1&${params.toString()}`
 }
 
 export function isNavActive(itemPath: string, currentPath: string): boolean {

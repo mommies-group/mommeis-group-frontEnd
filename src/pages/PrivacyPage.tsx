@@ -45,8 +45,8 @@ export function PrivacyPage() {
         <CardHeader title="Data handling" />
         <CardBody>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-200">
+            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-300">
                 <Icon name="check" size={14} />
               </span>
               <div>
@@ -58,8 +58,8 @@ export function PrivacyPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-200">
+            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-300">
                 <Icon name="clock" size={14} />
               </span>
               <div>
@@ -71,8 +71,8 @@ export function PrivacyPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-200">
+            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 ring-1 ring-slate-300">
                 <Icon name="alert" size={14} />
               </span>
               <div>

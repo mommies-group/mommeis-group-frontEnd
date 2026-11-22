@@ -22,7 +22,7 @@ export function EmptyState({
         compact ? 'gap-1.5 py-6' : 'gap-2 py-10'
       }`}
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-slate-50 text-slate-500">
         <Icon name={icon} size={21} />
       </span>
       <p className="text-sm font-semibold text-slate-800">{title}</p>

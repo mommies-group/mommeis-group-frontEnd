@@ -10,7 +10,7 @@ export type BadgeTone =
   | 'violet'
 
 const toneClasses: Record<BadgeTone, string> = {
-  neutral: 'border-slate-200 bg-slate-100 text-slate-600',
+  neutral: 'border-slate-300 bg-slate-100 text-slate-600',
   brand: 'border-teal-200 bg-teal-50 text-teal-800',
   success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   warning: 'border-amber-200 bg-amber-50 text-amber-800',

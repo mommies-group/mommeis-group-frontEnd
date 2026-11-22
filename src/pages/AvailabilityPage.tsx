@@ -107,7 +107,7 @@ function DaySlotsRow({
                   } ${
                     currentStatus === 'ACTIVE'
                       ? 'border-teal-200 bg-teal-50/70'
-                      : 'border-slate-200 bg-slate-50'
+                      : 'border-slate-300 bg-slate-50'
                   }`}
                   key={slot.id}
                 >
@@ -392,7 +392,7 @@ export function AvailabilityPage() {
                 ))}
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-200">
                 {DAYS.map((item) => (
                   <DaySlotsRow
                     deleteId={deleteId}
@@ -505,7 +505,7 @@ export function AvailabilityPage() {
                 ) : null}
               </div>
             </CardBody>
-            <div className="flex items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-3">
+            <div className="flex items-center gap-2 border-t border-slate-300 bg-slate-50/60 px-4 py-3">
               {isEditing ? (
                 <Button
                   type="button"

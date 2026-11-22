@@ -10,6 +10,7 @@ type PaginationProps = {
   onPageChange: (page: number) => void
   label?: string
   compact?: boolean
+  flush?: boolean
 }
 
 export function Pagination({
@@ -21,6 +22,7 @@ export function Pagination({
   onPageChange,
   label = 'list',
   compact = false,
+  flush = false,
 }: PaginationProps) {
   if (total === 0) {
     return null
@@ -29,7 +31,12 @@ export function Pagination({
   const suffix = ` (${label})`
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-2.5">
+    <div
+      className={[
+        'flex flex-wrap items-center justify-between gap-2 border-t border-slate-300 bg-slate-50/60',
+        flush ? '-mx-6 -mb-6 mt-auto px-6 py-3' : 'px-4 py-2.5',
+      ].join(' ')}
+    >
       <p className="text-[10px] text-slate-500">
         Showing {rangeStart}–{rangeEnd} of {total}
       </p>
