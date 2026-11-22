@@ -1,31 +1,31 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Icon } from '../components/icons/Icon'
-import { Button } from '../components/ui/Button'
-import { Field, Input } from '../components/ui/Field'
-import { InlineNotice } from '../components/ui/InlineNotice'
-import { Logo } from '../components/ui/Logo'
-import { useLogin } from '../hooks/mutations/auth/auth.mutations'
-import { getApiErrorMessage } from '../lib/api-error'
-import { ROUTES } from '../router/routes'
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { Icon } from "../components/icons/Icon";
+import { Button } from "../components/ui/Button";
+import { Field, Input } from "../components/ui/Field";
+import { InlineNotice } from "../components/ui/InlineNotice";
+import { Logo } from "../components/ui/Logo";
+import { useLogin } from "../hooks/mutations/auth/auth.mutations";
+import { getApiErrorMessage } from "../lib/api-error";
+import { ROUTES } from "../router/routes";
 
 export function LoginPage() {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [formError, setFormError] = useState('')
-  const loginMutation = useLogin()
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("specialist@mindbloom.test");
+  const [password, setPassword] = useState("Password123!");
+  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState("");
+  const loginMutation = useLogin();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setFormError('')
-    loginMutation.reset()
+    event.preventDefault();
+    setFormError("");
+    loginMutation.reset();
 
     if (!email.trim() || !password) {
-      setFormError('Enter your email and password.')
-      return
+      setFormError("Enter your email and password.");
+      return;
     }
 
     loginMutation.mutate(
@@ -33,8 +33,8 @@ export function LoginPage() {
       {
         onSuccess: () => navigate(ROUTES.dashboard, { replace: true }),
       },
-    )
-  }
+    );
+  };
 
   return (
     <main className="grid min-h-[100dvh] bg-slate-50 lg:h-[100dvh] lg:overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -63,7 +63,8 @@ export function LoginPage() {
               Clinical care, clearly coordinated.
             </h1>
             <p className="mt-3 max-w-sm text-sm leading-6 text-teal-100/80">
-              Sessions, notes, patients, and care plans in one focused workspace.
+              Sessions, notes, patients, and care plans in one focused
+              workspace.
             </p>
 
             <div className="mt-6 grid gap-2 text-[11px] text-teal-50/90">
@@ -117,9 +118,9 @@ export function LoginPage() {
                 required
                 disabled={loginMutation.isPending}
                 onChange={(event) => {
-                  setEmail(event.target.value)
-                  setFormError('')
-                  loginMutation.reset()
+                  setEmail(event.target.value);
+                  setFormError("");
+                  loginMutation.reset();
                 }}
               />
             </Field>
@@ -129,28 +130,28 @@ export function LoginPage() {
                 <Input
                   id="login-password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   placeholder="Enter your password"
                   value={password}
                   required
                   disabled={loginMutation.isPending}
                   onChange={(event) => {
-                    setPassword(event.target.value)
-                    setFormError('')
-                    loginMutation.reset()
+                    setPassword(event.target.value);
+                    setFormError("");
+                    loginMutation.reset();
                   }}
                   className="pr-11"
                 />
                 <button
                   type="button"
                   className="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   aria-pressed={showPassword}
                   disabled={loginMutation.isPending}
                   onClick={() => setShowPassword((current) => !current)}
                 >
-                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={17} />
+                  <Icon name={showPassword ? "eye-off" : "eye"} size={17} />
                 </button>
               </span>
             </Field>
@@ -196,5 +197,5 @@ export function LoginPage() {
         </div>
       </section>
     </main>
-  )
+  );
 }
