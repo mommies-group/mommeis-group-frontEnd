@@ -1,7 +1,9 @@
-import { describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { PatientsPage } from '../src/pages/PatientsPage'
+
+const mockCreateNote = jest.fn()
 
 jest.mock('../src/hooks/queries/patients/patients.queries', () => ({
   usePatients: () => ({
@@ -28,9 +30,24 @@ jest.mock('../src/hooks/queries/clinical-notes/clinical-notes.queries', () => ({
   useClinicalNotes: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
-jest.mock('../src/hooks/queries/activities/activities.queries', () => ({
-  useActivities: () => ({ data: [], isLoading: false, isError: false }),
-}))
+jest.mock(
+  '../src/hooks/queries/activities/activity-catalog.queries',
+  () => ({
+    useCatalogActivities: () => ({
+      data: [
+        {
+          id: 'act-1',
+          title: 'Daily reading practice',
+          isActive: true,
+          source: 'GLOBAL',
+          durationMinutes: 10,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    }),
+  }),
+)
 
 jest.mock('../src/hooks/queries/bookings/bookings.queries', () => ({
   useBookings: () => ({ data: [], isLoading: false, isError: false }),
@@ -38,7 +55,7 @@ jest.mock('../src/hooks/queries/bookings/bookings.queries', () => ({
 
 jest.mock('../src/hooks/mutations/clinical-notes/clinical-notes.mutations', () => ({
   useCreateClinicalNote: () => ({
-    mutate: jest.fn(),
+    mutate: mockCreateNote,
     isPending: false,
     reset: jest.fn(),
   }),
@@ -53,6 +70,10 @@ jest.mock('../src/hooks/mutations/bookings/bookings.mutations', () => ({
 }))
 
 describe('patients notes entry', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   it('opens the notes dialog from the patient row, not from the page header', () => {
     render(
       <MemoryRouter>
@@ -69,6 +90,37 @@ describe('patients notes entry', () => {
       screen.getByRole('dialog', { name: 'Clinical notes' }),
     ).toBeInTheDocument()
     expect(screen.getAllByText(/Ava Smith/).length).toBeGreaterThan(0)
-    expect(screen.getByLabelText(/Activity/)).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Select Daily reading practice'),
+    ).toBeInTheDocument()
+  })
+
+  it('sends selected catalog activities with the note', () => {
+    render(
+      <MemoryRouter>
+        <PatientsPage />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }))
+    fireEvent.change(screen.getByLabelText('Note'), {
+      target: { value: 'Session notes' },
+    })
+    fireEvent.click(screen.getByLabelText('Select Daily reading practice'))
+    fireEvent.change(screen.getByLabelText('Note for Daily reading practice'), {
+      target: { value: 'Start with familiar cards.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }))
+
+    expect(mockCreateNote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        childId: 'child-1',
+        payload: expect.objectContaining({
+          activityIds: ['act-1'],
+          specialistNotes: { 'act-1': 'Start with familiar cards.' },
+        }),
+      }),
+      expect.anything(),
+    )
   })
 })

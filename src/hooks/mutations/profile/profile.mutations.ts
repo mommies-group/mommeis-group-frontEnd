@@ -5,11 +5,13 @@ import {
   deleteAvailabilitySlot,
   replaceAvailability,
   updateAvailabilitySlot,
+  updatePricing,
   updateProfile,
 } from '../../../services/profile/profile.service'
 import type {
   AvailabilitySlotInput,
   AvailabilitySlotPatch,
+  UpdatePricingRequest,
   UpdateProfileRequest,
 } from '../../../types/profile.types'
 
@@ -21,6 +23,23 @@ export function useUpdateProfile() {
     onSuccess: (profile) => {
       queryClient.setQueryData(queryKeys.profile.detail, profile)
       queryClient.setQueryData(queryKeys.auth.currentUser, profile)
+    },
+  })
+}
+
+export function useUpdatePricing() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: UpdatePricingRequest) => updatePricing(payload),
+    onSuccess: (pricing) => {
+      queryClient.setQueryData(queryKeys.pricing.detail, pricing)
+      queryClient.setQueryData(queryKeys.profile.detail, (current: unknown) =>
+        current && typeof current === 'object'
+          ? { ...current, ...pricing }
+          : current,
+      )
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all })
     },
   })
 }

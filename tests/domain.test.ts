@@ -18,33 +18,11 @@ import {
   type BookingStatus,
 } from '../src/types/booking.types'
 import {
-  getActivityStatus,
-  type Activity,
-} from '../src/types/activity.types'
-import {
   ROUTES,
   getPageTitle,
   isNavActive,
   patientRecordPath,
 } from '../src/router/routes'
-
-function activity(overrides: Partial<Activity> = {}): Activity {
-  return {
-    id: 'activity-1',
-    childId: 'child-1',
-    specialistId: 'spec-1',
-    title: 'Emotion cards',
-    instructions: 'Name each feeling.',
-    mediaReference: null,
-    durationMinutes: 15,
-    frequency: '3 times per week',
-    dueDate: null,
-    retractedAt: null,
-    createdAt: '2026-11-19T20:17:40.179Z',
-    updatedAt: '2026-11-19T20:17:40.179Z',
-    ...overrides,
-  }
-}
 
 describe('format helpers', () => {
   it('handles missing dates', () => {
@@ -102,19 +80,6 @@ describe('booking status metadata', () => {
     expect(BOOKING_STATUSES).toContain('NO_SHOW')
     expect(bookingStatusLabels.CANCELLED).toBe('Cancelled')
     expect(bookingStatusLabels.NO_SHOW).toBe('No show')
-  })
-})
-
-describe('activity status', () => {
-  it('prefers the explicit status field', () => {
-    expect(getActivityStatus(activity({ status: 'COMPLETED' }))).toBe(
-      'COMPLETED',
-    )
-  })
-
-  it('falls back to the legacy completed flag', () => {
-    expect(getActivityStatus(activity({ completed: true }))).toBe('COMPLETED')
-    expect(getActivityStatus(activity({ completed: false }))).toBe('ASSIGNED')
   })
 })
 

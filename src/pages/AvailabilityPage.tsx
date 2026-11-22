@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Field, Input, Select } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
   useCreateAvailabilitySlot,
@@ -15,6 +16,7 @@ import {
   useUpdateAvailabilitySlot,
 } from '../hooks/mutations/profile/profile.mutations'
 import { useAvailability } from '../hooks/queries/profile/profile.queries'
+import { usePagination } from '../hooks/use-pagination'
 import { formatClockTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
@@ -33,6 +35,21 @@ const DAYS: Array<{ label: string; short: string; value: DayOfWeek }> = [
   { label: 'Sunday', short: 'Sun', value: 0 },
 ]
 
+type DayOption = (typeof DAYS)[number]
+
+type DaySlotsRowProps = {
+  item: DayOption
+  slots: AvailabilitySlot[]
+  editingId: string | null
+  deleteId: string | null
+  isBusy: boolean
+  onEdit: (slot: AvailabilitySlot) => void
+  onDelete: (slotId: string) => void
+  onRequestDelete: (slotId: string) => void
+  onCancelDelete: () => void
+  onStatusChange: (slot: AvailabilitySlot, status: AvailabilityStatus) => void
+}
+
 const STATUS_LABELS: Record<AvailabilityStatus, string> = {
   ACTIVE: 'Active',
   INACTIVE: 'Inactive',
@@ -49,6 +66,126 @@ function formatRange(start: string, end: string): string {
 
 function slotStatus(slot: AvailabilitySlot): AvailabilityStatus {
   return slot.status ?? 'ACTIVE'
+}
+
+function DaySlotsRow({
+  item,
+  slots,
+  editingId,
+  deleteId,
+  isBusy,
+  onEdit,
+  onDelete,
+  onRequestDelete,
+  onCancelDelete,
+  onStatusChange,
+}: DaySlotsRowProps) {
+  const pager = usePagination(slots, 5, `availability-${item.value}`)
+
+  return (
+    <div className="grid gap-2 px-4 py-3 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-start">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600">
+          {item.short}
+        </span>
+        <span className="text-xs font-semibold text-slate-800">
+          {item.label}
+        </span>
+      </div>
+
+      <div className="min-w-0">
+        <div className="flex min-h-9 flex-wrap items-center gap-2">
+          {slots.length > 0 ? (
+            pager.visibleItems.map((slot) => {
+              const currentStatus = slotStatus(slot)
+              return (
+                <div
+                  className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                    editingId === slot.id
+                      ? 'ring-2 ring-teal-400 ring-offset-1'
+                      : ''
+                  } ${
+                    currentStatus === 'ACTIVE'
+                      ? 'border-teal-200 bg-teal-50/70'
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
+                  key={slot.id}
+                >
+                  <span className="text-[11px] font-semibold text-slate-700">
+                    {formatRange(slot.startTime, slot.endTime)}
+                  </span>
+                  <Select
+                    aria-label={`Status for ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                    value={currentStatus}
+                    disabled={isBusy}
+                    className="h-7 w-24 text-[11px]"
+                    onChange={(event) =>
+                      onStatusChange(
+                        slot,
+                        event.target.value as AvailabilityStatus,
+                      )
+                    }
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </Select>
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                    aria-label={`Edit ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                    onClick={() => onEdit(slot)}
+                  >
+                    <Icon name="edit" size={13} />
+                  </button>
+                  {deleteId === slot.id ? (
+                    <span className="flex items-center gap-1">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={() => onDelete(slot.id)}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={onCancelDelete}
+                      >
+                        Cancel
+                      </Button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                      aria-label={`Delete ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
+                      onClick={() => onRequestDelete(slot.id)}
+                    >
+                      <Icon name="trash" size={13} />
+                    </button>
+                  )}
+                </div>
+              )
+            })
+          ) : (
+            <span className="text-[11px] text-slate-500">No slots</span>
+          )}
+        </div>
+        <Pagination
+          compact
+          label={`${item.label} slots`}
+          onPageChange={pager.setPage}
+          page={pager.page}
+          rangeEnd={pager.rangeEnd}
+          rangeStart={pager.rangeStart}
+          total={pager.total}
+          totalPages={pager.totalPages}
+        />
+      </div>
+    </div>
+  )
 }
 
 export function AvailabilityPage() {
@@ -74,7 +211,8 @@ export function AvailabilityPage() {
   const activeStart = editingSlot ? editStart : start
   const activeEnd = editingSlot ? editEnd : end
   const activeStatus = editingSlot ? editStatus : status
-  const isBusy = createSlot.isPending || updateSlot.isPending
+  const isBusy =
+    createSlot.isPending || updateSlot.isPending || deleteSlot.isPending
 
   const slotsByDay = useMemo(() => {
     const grouped = new Map<DayOfWeek, AvailabilitySlot[]>()
@@ -255,111 +393,21 @@ export function AvailabilityPage() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {DAYS.map((item) => {
-                  const slots = slotsByDay.get(item.value) ?? []
-
-                  return (
-                    <div
-                      className="grid gap-2 px-4 py-3 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-start"
-                      key={item.value}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600">
-                          {item.short}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-800">
-                          {item.label}
-                        </span>
-                      </div>
-
-                      <div className="flex min-h-9 flex-wrap items-center gap-2">
-                        {slots.length > 0 ? (
-                          slots.map((slot) => {
-                            const currentStatus = slotStatus(slot)
-                            return (
-                              <div
-                                className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
-                                  editingId === slot.id
-                                    ? 'ring-2 ring-teal-400 ring-offset-1'
-                                    : ''
-                                } ${
-                                  currentStatus === 'ACTIVE'
-                                    ? 'border-teal-200 bg-teal-50/70'
-                                    : 'border-slate-200 bg-slate-50'
-                                }`}
-                                key={slot.id}
-                              >
-                                <span className="text-[11px] font-semibold text-slate-700">
-                                  {formatRange(
-                                    slot.startTime,
-                                    slot.endTime,
-                                  )}
-                                </span>
-                                <Select
-                                  aria-label={`Status for ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
-                                  value={currentStatus}
-                                  disabled={updateSlot.isPending}
-                                  className="h-7 w-24 text-[11px]"
-                                  onChange={(event) =>
-                                    handleStatusChange(
-                                      slot,
-                                      event.target
-                                        .value as AvailabilityStatus,
-                                    )
-                                  }
-                                >
-                                  <option value="ACTIVE">Active</option>
-                                  <option value="INACTIVE">Inactive</option>
-                                </Select>
-                                <button
-                                  type="button"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                                  aria-label={`Edit ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
-                                  onClick={() => startEditing(slot)}
-                                >
-                                  <Icon name="edit" size={13} />
-                                </button>
-                                {deleteId === slot.id ? (
-                                  <span className="flex items-center gap-1">
-                                    <Button
-                                      variant="danger"
-                                      size="sm"
-                                      disabled={deleteSlot.isPending}
-                                      onClick={() => handleDelete(slot.id)}
-                                    >
-                                      Delete
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      disabled={deleteSlot.isPending}
-                                      onClick={() => setDeleteId(null)}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-                                    aria-label={`Delete ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
-                                    onClick={() => setDeleteId(slot.id)}
-                                  >
-                                    <Icon name="trash" size={13} />
-                                  </button>
-                                )}
-                              </div>
-                            )
-                          })
-                        ) : (
-                          <span className="text-[11px] text-slate-500">
-                            No slots
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                {DAYS.map((item) => (
+                  <DaySlotsRow
+                    deleteId={deleteId}
+                    editingId={editingId}
+                    isBusy={isBusy}
+                    item={item}
+                    key={item.value}
+                    onCancelDelete={() => setDeleteId(null)}
+                    onDelete={handleDelete}
+                    onEdit={startEditing}
+                    onRequestDelete={setDeleteId}
+                    onStatusChange={handleStatusChange}
+                    slots={slotsByDay.get(item.value) ?? []}
+                  />
+                ))}
               </div>
             )}
           </CardBody>

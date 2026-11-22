@@ -12,8 +12,10 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Select } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useCalendar } from '../hooks/queries/calendar/calendar.queries'
+import { usePagination } from '../hooks/use-pagination'
 import {
   useBookingById,
   useBookings,
@@ -71,6 +73,17 @@ export function BookingsPage() {
         new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
     )
   }, [allEvents, selectedDateKey])
+
+  const schedulePager = usePagination(
+    sortedEvents,
+    5,
+    `${range.from}:${range.to}:${selectedDateKey ?? 'all'}`,
+  )
+  const bookingsPager = usePagination(
+    bookings.data ?? [],
+    5,
+    statusFilter,
+  )
 
   const selectedDateLabel = selectedDateKey
     ? new Date(selectedDateKey + 'T00:00:00').toLocaleDateString(undefined, {
@@ -174,8 +187,8 @@ export function BookingsPage() {
                 />
               </div>
             ) : sortedEvents.length > 0 ? (
-              <div className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto">
-                {sortedEvents.map((event) => (
+              <div className="divide-y divide-slate-100">
+                {schedulePager.visibleItems.map((event) => (
                   <button
                     type="button"
                     className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
@@ -212,6 +225,16 @@ export function BookingsPage() {
               </div>
             )}
           </CardBody>
+          <Pagination
+            compact
+            label="Schedule"
+            onPageChange={schedulePager.setPage}
+            page={schedulePager.page}
+            rangeEnd={schedulePager.rangeEnd}
+            rangeStart={schedulePager.rangeStart}
+            total={schedulePager.total}
+            totalPages={schedulePager.totalPages}
+          />
         </Card>
       </div>
 
@@ -255,8 +278,8 @@ export function BookingsPage() {
                 />
               </div>
             ) : bookings.data && bookings.data.length > 0 ? (
-              <div className="max-h-[460px] divide-y divide-slate-100 overflow-y-auto">
-                {bookings.data.map((booking) => {
+              <div className="divide-y divide-slate-100">
+                {bookingsPager.visibleItems.map((booking) => {
                   const selected = booking.id === selectedBookingId
                   return (
                     <button
@@ -315,6 +338,15 @@ export function BookingsPage() {
               </div>
             )}
           </CardBody>
+          <Pagination
+            label="Bookings"
+            onPageChange={bookingsPager.setPage}
+            page={bookingsPager.page}
+            rangeEnd={bookingsPager.rangeEnd}
+            rangeStart={bookingsPager.rangeStart}
+            total={bookingsPager.total}
+            totalPages={bookingsPager.totalPages}
+          />
         </Card>
 
         <div ref={reviewRef} className="min-w-0 scroll-mt-24">

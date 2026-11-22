@@ -66,7 +66,7 @@ const titles: Record<string, string> = {
   [ROUTES.bookings]: 'Bookings & Schedule',
   [ROUTES.patients]: 'My Patients',
   [ROUTES.patientRecord]: 'Patient Clinical Record',
-  [ROUTES.activities]: 'Activities',
+  [ROUTES.activities]: 'Activity library',
   [ROUTES.privacy]: 'Privacy',
 }
 

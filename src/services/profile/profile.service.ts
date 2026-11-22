@@ -5,7 +5,9 @@ import type {
   AvailabilitySlot,
   AvailabilitySlotInput,
   AvailabilitySlotPatch,
+  Pricing,
   SpecialistProfile,
+  UpdatePricingRequest,
   UpdateProfileRequest,
 } from '../../types/profile.types'
 
@@ -24,6 +26,26 @@ export async function updateProfile(
 ): Promise<SpecialistProfile> {
   const response = await apiClient.patch<ApiSuccessResponse<SpecialistProfile>>(
     '/specialist/profile',
+    payload,
+  )
+  return unwrapApiData(response)
+}
+
+export async function getPricing(
+  signal?: AbortSignal,
+): Promise<Pricing> {
+  const response = await apiClient.get<ApiSuccessResponse<Pricing>>(
+    '/specialist/pricing',
+    { signal },
+  )
+  return unwrapApiData(response)
+}
+
+export async function updatePricing(
+  payload: UpdatePricingRequest,
+): Promise<Pricing> {
+  const response = await apiClient.patch<ApiSuccessResponse<Pricing>>(
+    '/specialist/pricing',
     payload,
   )
   return unwrapApiData(response)

@@ -10,8 +10,10 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import { usePatients } from '../hooks/queries/patients/patients.queries'
+import { usePagination } from '../hooks/use-pagination'
 import { formatBirthDate, initials } from '../lib/format'
 import { patientRecordPath } from '../router/routes'
 
@@ -34,6 +36,8 @@ export function PatientsPage() {
         .includes(query),
     )
   }, [patients.data, search])
+
+  const pager = usePagination(filtered, 5, search)
 
   return (
     <div className="flex flex-col gap-5">
@@ -131,7 +135,7 @@ export function PatientsPage() {
                       </tr>
                     ))
                   ) : filtered.length > 0 ? (
-                    filtered.map((patient) => (
+                    pager.visibleItems.map((patient) => (
                       <tr
                         className="transition hover:bg-slate-50/70"
                         key={patient.id}
@@ -214,6 +218,15 @@ export function PatientsPage() {
             </div>
           )}
         </CardBody>
+        <Pagination
+          label="Patients"
+          onPageChange={pager.setPage}
+          page={pager.page}
+          rangeEnd={pager.rangeEnd}
+          rangeStart={pager.rangeStart}
+          total={pager.total}
+          totalPages={pager.totalPages}
+        />
       </Card>
 
       {notesChildId ? (

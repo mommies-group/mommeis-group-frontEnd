@@ -1,193 +1,248 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
 import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { buttonStyles } from '../components/ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
-  useCreateActivity,
-  useRetractActivity,
-  useUpdateActivity,
-} from '../hooks/mutations/activities/activities.mutations'
-import { useActivities } from '../hooks/queries/activities/activities.queries'
-import { usePatients } from '../hooks/queries/patients/patients.queries'
-import { formatDate, toDueDateIso } from '../lib/format'
+  useCreateCustomActivity,
+  useDeactivateCustomActivity,
+  useUpdateCustomActivity,
+} from '../hooks/mutations/activities/activity-catalog.mutations'
+import { useCatalogActivities } from '../hooks/queries/activities/activity-catalog.queries'
+import { usePagination } from '../hooks/use-pagination'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
-  Activity,
-  ActivityCategory,
-  ActivityStatus,
-} from '../types/activity.types'
-import { getActivityStatus } from '../types/activity.types'
-import { ROUTES } from '../router/routes'
+  CatalogActivity,
+  CatalogActivitySourceFilter,
+  CreateCustomActivityRequest,
+} from '../types/activity-catalog.types'
 
-const CATEGORY_OPTIONS: Array<{ value: ActivityCategory; label: string }> = [
-  { value: 'SOCIAL_EMOTIONAL', label: 'Social & emotional' },
-  { value: 'COGNITIVE', label: 'Cognitive' },
-  { value: 'LANGUAGE', label: 'Language' },
-  { value: 'MOTOR', label: 'Motor skills' },
-  { value: 'SENSORY', label: 'Sensory' },
-  { value: 'BEHAVIORAL', label: 'Behavioral' },
-  { value: 'SELF_CARE', label: 'Self care' },
+const CATEGORY_OPTIONS = [
+  'GENERAL',
+  'SOCIAL_EMOTIONAL',
+  'COGNITIVE',
+  'LANGUAGE',
+  'MOTOR',
+  'FINE_MOTOR',
+  'SENSORY',
+  'BEHAVIORAL',
+  'BEHAVIOR',
+  'SELF_CARE',
+  'WELLBEING',
 ]
 
-const STATUS_LABELS: Record<ActivityStatus, string> = {
-  ASSIGNED: 'Assigned',
-  COMPLETED: 'Completed',
-  RETRACTED: 'Retracted',
+const DIFFICULTY_OPTIONS = ['EASY', 'MEDIUM', 'HARD']
+
+const SOURCE_OPTIONS: Array<{
+  value: CatalogActivitySourceFilter
+  label: string
+}> = [
+  { value: 'all', label: 'All activities' },
+  { value: 'global', label: 'Global library' },
+  { value: 'custom', label: 'My activities' },
+]
+
+type CustomForm = {
+  title: string
+  description: string
+  instructions: string
+  category: string
+  developmentalArea: string
+  minAge: string
+  maxAge: string
+  durationMinutes: string
+  difficultyLevel: string
+  materials: string
 }
 
-const STATUS_TONES: Record<ActivityStatus, 'neutral' | 'success' | 'danger'> = {
-  ASSIGNED: 'neutral',
-  COMPLETED: 'success',
-  RETRACTED: 'danger',
+const emptyForm: CustomForm = {
+  title: '',
+  description: '',
+  instructions: '',
+  category: 'GENERAL',
+  developmentalArea: '',
+  minAge: '',
+  maxAge: '',
+  durationMinutes: '',
+  difficultyLevel: 'EASY',
+  materials: '',
 }
 
-const EDITABLE_STATUSES: ActivityStatus[] = ['ASSIGNED', 'COMPLETED']
+function categoryLabel(value: string | null) {
+  if (!value) {
+    return 'General'
+  }
+  return value.replaceAll('_', ' ').toLowerCase().replace(/^./, (letter) => letter.toUpperCase())
+}
 
-function categoryLabel(category: Activity['category']) {
-  return (
-    CATEGORY_OPTIONS.find((option) => option.value === category)?.label ??
-    (category ? String(category).replaceAll('_', ' ').toLowerCase() : 'General')
-  )
+function ageLabel(minAge: number | null, maxAge: number | null) {
+  if (minAge === null && maxAge === null) {
+    return 'All ages'
+  }
+  if (minAge !== null && maxAge !== null) {
+    return `${minAge}–${maxAge} months`
+  }
+  if (minAge !== null) {
+    return `${minAge}+ months`
+  }
+  return `Up to ${maxAge} months`
 }
 
 export function ActivitiesPage() {
-  const [searchParams] = useSearchParams()
-  const initialChildId = searchParams.get('childId') ?? ''
-  const [patientId, setPatientId] = useState(initialChildId)
-  const [title, setTitle] = useState('')
-  const [instructions, setInstructions] = useState('')
-  const [category, setCategory] =
-    useState<ActivityCategory>('SOCIAL_EMOTIONAL')
-  const [mediaReference, setMediaReference] = useState('')
-  const [duration, setDuration] = useState('')
-  const [frequency, setFrequency] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'ALL' | ActivityStatus>('ALL')
-  const [statusDraft, setStatusDraft] = useState<Record<string, ActivityStatus>>(
-    {},
+  const [source, setSource] = useState<CatalogActivitySourceFilter>('all')
+  const [category, setCategory] = useState('')
+  const [search, setSearch] = useState('')
+  const [form, setForm] = useState<CustomForm>(emptyForm)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null)
+
+  const activities = useCatalogActivities({
+    source,
+    category: category || undefined,
+    search: search.trim() || undefined,
+  })
+  const createActivity = useCreateCustomActivity()
+  const updateActivity = useUpdateCustomActivity()
+  const deactivateActivity = useDeactivateCustomActivity()
+
+  const editingActivity = useMemo(
+    () => (activities.data ?? []).find((item) => item.id === editingId) ?? null,
+    [activities.data, editingId],
   )
-  const [retractingId, setRetractingId] = useState<string | null>(null)
 
-  const patients = usePatients()
-  const activities = useActivities()
-  const createActivity = useCreateActivity()
-  const updateActivity = useUpdateActivity()
-  const retractActivity = useRetractActivity()
+  const activitiesList = activities.data ?? []
+  const pager = usePagination(
+    activitiesList,
+    5,
+    `${source}:${category}:${search.trim()}`,
+  )
 
-  const filteredActivities = useMemo(() => {
-    const items = activities.data ?? []
-    if (statusFilter === 'ALL') {
-      return items
-    }
-    return items.filter(
-      (activity) => getActivityStatus(activity) === statusFilter,
-    )
-  }, [activities.data, statusFilter])
+  const isBusy =
+    createActivity.isPending || updateActivity.isPending || deactivateActivity.isPending
 
   const resetForm = () => {
-    setPatientId('')
-    setTitle('')
-    setInstructions('')
-    setCategory('SOCIAL_EMOTIONAL')
-    setMediaReference('')
-    setDuration('')
-    setFrequency('')
-    setDueDate('')
+    setForm(emptyForm)
+    setEditingId(null)
+    createActivity.reset()
+    updateActivity.reset()
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const startEditing = (activity: CatalogActivity) => {
+    setDeactivatingId(null)
+    setEditingId(activity.id)
+    setForm({
+      title: activity.title,
+      description: activity.description ?? '',
+      instructions: activity.instructions,
+      category: activity.category ?? 'GENERAL',
+      developmentalArea: activity.developmentalArea ?? '',
+      minAge: activity.minAge === null ? '' : String(activity.minAge),
+      maxAge: activity.maxAge === null ? '' : String(activity.maxAge),
+      durationMinutes: String(activity.durationMinutes),
+      difficultyLevel: activity.difficultyLevel ?? 'EASY',
+      materials: activity.materials ?? '',
+    })
+  }
+
+  const updateField = (field: keyof CustomForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }))
     createActivity.reset()
+    updateActivity.reset()
+  }
 
-    const durationMinutes = Number(duration)
+  const buildPayload = (): CreateCustomActivityRequest | null => {
+    const durationMinutes = Number(form.durationMinutes)
+    const minAge = form.minAge.trim() ? Number(form.minAge) : null
+    const maxAge = form.maxAge.trim() ? Number(form.maxAge) : null
 
-    if (!patientId) {
-      notifyError(null, 'Choose a patient.')
-      return
-    }
-
-    if (!title.trim() || !instructions.trim()) {
+    if (!form.title.trim() || !form.instructions.trim()) {
       notifyError(null, 'Add a title and instructions.')
-      return
+      return null
     }
 
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
       notifyError(null, 'Enter a duration of at least 1 minute.')
-      return
+      return null
     }
 
-    if (!frequency.trim()) {
-      notifyError(null, 'Add a frequency.')
-      return
+    if (
+      (minAge !== null && !Number.isInteger(minAge)) ||
+      (maxAge !== null && !Number.isInteger(maxAge)) ||
+      (minAge !== null && minAge < 0) ||
+      (maxAge !== null && maxAge < 0) ||
+      (minAge !== null && maxAge !== null && minAge > maxAge)
+    ) {
+      notifyError(null, 'Check the age range.')
+      return null
     }
 
-    createActivity.mutate(
-      {
-        childId: patientId,
-        payload: {
-          title: title.trim(),
-          instructions: instructions.trim(),
-          category,
-          mediaReference: mediaReference.trim() || null,
-          durationMinutes,
-          frequency: frequency.trim(),
-          dueDate: toDueDateIso(dueDate),
-          status: 'ASSIGNED',
-          source: 'SPECIALIST',
-        },
-      },
-      {
-        onSuccess: () => {
-          resetForm()
-          notifySuccess('Activity assigned.')
-        },
-        onError: (error) => notifyError(error),
-      },
-    )
+    return {
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      instructions: form.instructions.trim(),
+      category: form.category,
+      developmentalArea: form.developmentalArea.trim() || null,
+      minAge,
+      maxAge,
+      durationMinutes,
+      difficultyLevel: form.difficultyLevel,
+      materials: form.materials.trim() || null,
+    }
   }
 
-  const handleStatusUpdate = (activity: Activity) => {
-    const nextStatus =
-      statusDraft[activity.id] ?? getActivityStatus(activity)
-
-    updateActivity.mutate(
-      { id: activity.id, payload: { status: nextStatus } },
-      {
-        onSuccess: () => {
-          setStatusDraft((current) => {
-            const next = { ...current }
-            delete next[activity.id]
-            return next
-          })
-          notifySuccess('Activity status updated.')
-        },
-        onError: (error) => notifyError(error),
-      },
-    )
-  }
-
-  const handleRetract = (activityId: string) => {
-    if (retractingId !== activityId) {
-      setRetractingId(activityId)
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const payload = buildPayload()
+    if (!payload) {
       return
     }
 
-    retractActivity.mutate(activityId, {
+    if (editingId) {
+      updateActivity.mutate(
+        { id: editingId, payload },
+        {
+          onSuccess: () => {
+            resetForm()
+            notifySuccess('Custom activity updated.')
+          },
+          onError: (error) => notifyError(error),
+        },
+      )
+      return
+    }
+
+    createActivity.mutate(payload, {
       onSuccess: () => {
-        setRetractingId(null)
-        notifySuccess('Activity retracted.')
+        resetForm()
+        notifySuccess('Custom activity created.')
+      },
+      onError: (error) => notifyError(error),
+    })
+  }
+
+  const handleDeactivate = (id: string) => {
+    if (deactivatingId !== id) {
+      setDeactivatingId(id)
+      return
+    }
+
+    deactivateActivity.mutate(id, {
+      onSuccess: () => {
+        setDeactivatingId(null)
+        if (editingId === id) {
+          resetForm()
+        }
+        notifySuccess('Custom activity deactivated.')
       },
       onError: (error) => {
-        setRetractingId(null)
+        setDeactivatingId(null)
         notifyError(error)
       },
     })
@@ -196,200 +251,60 @@ export function ActivitiesPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Activities"
+        title="Activity library"
         icon="activity"
         actions={
-          <Link
-            className={buttonStyles({ variant: 'secondary', size: 'sm' })}
-            to={ROUTES.patients}
-          >
-            <Icon name="users" size={14} />
-            Patients
-          </Link>
+          <Badge tone="neutral">{activities.data?.length ?? 0} activities</Badge>
         }
       />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader
-            title="Create activity"
+            title="Catalog"
             action={
-              createActivity.isPending ? (
-                <Badge tone="info" dot>
-                  Saving
-                </Badge>
-              ) : null
-            }
-          />
-          <form onSubmit={handleSubmit}>
-            <CardBody>
-              <div className="grid gap-4">
-                <Field label="Patient" htmlFor="activity-patient">
-                  <Select
-                    id="activity-patient"
-                    value={patientId}
-                    disabled={patients.isLoading || createActivity.isPending}
-                    onChange={(event) => setPatientId(event.target.value)}
-                  >
-                    <option value="">Select patient</option>
-                    {patients.data?.map((patient) => (
-                      <option value={patient.id} key={patient.id}>
-                        {patient.firstName} {patient.lastName}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-
-                {patients.isError ? (
-                  <ApiErrorNotice
-                    error={patients.error}
-                    title="Could not load patients"
-                    onRetry={() => {
-                      void patients.refetch()
-                    }}
-                  />
-                ) : null}
-
-                <Field label="Title" htmlFor="activity-title">
-                  <Input
-                    id="activity-title"
-                    value={title}
-                    disabled={createActivity.isPending}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Activity title"
-                  />
-                </Field>
-
-                <Field label="Instructions" htmlFor="activity-instructions">
-                  <Textarea
-                    id="activity-instructions"
-                    value={instructions}
-                    disabled={createActivity.isPending}
-                    onChange={(event) => setInstructions(event.target.value)}
-                    placeholder="Step-by-step instructions for the family"
-                    rows={4}
-                  />
-                </Field>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Category" htmlFor="activity-category">
-                    <Select
-                      id="activity-category"
-                      value={category}
-                      disabled={createActivity.isPending}
-                      onChange={(event) =>
-                        setCategory(event.target.value as ActivityCategory)
-                      }
-                    >
-                      {CATEGORY_OPTIONS.map((option) => (
-                        <option value={option.value} key={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Duration" htmlFor="activity-duration">
-                    <span className="relative block">
-                      <Input
-                        id="activity-duration"
-                        type="number"
-                        min={1}
-                        value={duration}
-                        disabled={createActivity.isPending}
-                        onChange={(event) => setDuration(event.target.value)}
-                        placeholder="15"
-                        className="pr-9"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">
-                        min
-                      </span>
-                    </span>
-                  </Field>
-                  <Field label="Frequency" htmlFor="activity-frequency">
-                    <Input
-                      id="activity-frequency"
-                      value={frequency}
-                      disabled={createActivity.isPending}
-                      onChange={(event) => setFrequency(event.target.value)}
-                      placeholder="3 times per week"
-                    />
-                  </Field>
-                  <Field label="Due date" htmlFor="activity-due-date" optional>
-                    <Input
-                      id="activity-due-date"
-                      type="date"
-                      value={dueDate}
-                      disabled={createActivity.isPending}
-                      onChange={(event) => setDueDate(event.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <Field
-                  label="Media reference"
-                  htmlFor="activity-media"
-                  optional
-                >
-                  <Input
-                    id="activity-media"
-                    value={mediaReference}
-                    disabled={createActivity.isPending}
-                    onChange={(event) => setMediaReference(event.target.value)}
-                    placeholder="emotion-cards.pdf"
-                  />
-                </Field>
-              </div>
-            </CardBody>
-            <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetForm}
-                disabled={createActivity.isPending}
-              >
-                Clear
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={createActivity.isPending}
-                aria-busy={createActivity.isPending}
-              >
-                <Icon name="check" size={13} />
-                {createActivity.isPending ? 'Saving…' : 'Assign activity'}
-              </Button>
-            </div>
-          </form>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Assigned activities"
-            action={
-              <div className="flex items-center gap-2">
-                <Badge tone="neutral">
-                  {filteredActivities.length} total
-                </Badge>
+              <div className="flex flex-wrap items-center gap-2">
                 <Select
-                  aria-label="Filter activities by status"
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as 'ALL' | ActivityStatus)
-                  }
+                  aria-label="Filter activities by source"
                   className="h-8 w-32 text-xs"
+                  onChange={(event) =>
+                    setSource(event.target.value as CatalogActivitySourceFilter)
+                  }
+                  value={source}
                 >
-                  <option value="ALL">All statuses</option>
-                  <option value="ASSIGNED">Assigned</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="RETRACTED">Retracted</option>
+                  {SOURCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </Select>
+                <Select
+                  aria-label="Filter activities by category"
+                  className="h-8 w-32 text-xs"
+                  onChange={(event) => setCategory(event.target.value)}
+                  value={category}
+                >
+                  <option value="">All categories</option>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {categoryLabel(option)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  aria-label="Search activities"
+                  className="h-8 w-40 text-xs"
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search"
+                  value={search}
+                />
               </div>
             }
           />
           <CardBody flush>
             {activities.isLoading ? (
               <div className="grid gap-2 p-4">
+                <Skeleton className="h-24 w-full rounded-xl" />
                 <Skeleton className="h-24 w-full rounded-xl" />
                 <Skeleton className="h-24 w-full rounded-xl" />
               </div>
@@ -403,114 +318,85 @@ export function ActivitiesPage() {
                   }}
                 />
               </div>
-            ) : filteredActivities.length > 0 ? (
+            ) : activitiesList.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {filteredActivities.map((activity) => {
-                  const currentStatus = getActivityStatus(activity)
-                  const draftStatus =
-                    statusDraft[activity.id] ?? currentStatus
-                  const dirty = draftStatus !== currentStatus
-
-                  return (
-                    <article className="p-4" key={activity.id}>
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
+                {pager.visibleItems.map((activity) => (
+                  <article className="p-4" key={activity.id}>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="text-xs font-semibold text-slate-900">
                             {activity.title}
                           </p>
-                          <p className="mt-0.5 text-[10px] text-slate-500">
-                            {activity.child
-                              ? `${activity.child.firstName} ${activity.child.lastName}`
-                              : 'Patient activity'}
-                          </p>
-                        </div>
-                        <Badge tone={STATUS_TONES[currentStatus]}>
-                          {STATUS_LABELS[currentStatus]}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-[11px] leading-4 text-slate-600">
-                        {activity.instructions}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
-                        <span className="capitalize">
-                          {categoryLabel(activity.category)}
-                        </span>
-                        <span>{activity.durationMinutes} min</span>
-                        <span>{activity.frequency}</span>
-                        <span>Due {formatDate(activity.dueDate)}</span>
-                        {activity.mediaReference ? (
-                          <span className="truncate">
-                            {activity.mediaReference}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {retractingId === activity.id ? (
-                        <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2">
-                          <span className="text-[10px] text-rose-900">
-                            Retract this activity?
-                          </span>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            disabled={retractActivity.isPending}
-                            onClick={() => handleRetract(activity.id)}
+                          <Badge
+                            tone={activity.isGlobal ? 'info' : 'success'}
                           >
-                            Confirm
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={retractActivity.isPending}
-                            onClick={() => setRetractingId(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="mt-2.5 flex flex-wrap items-end gap-2">
-                          <Select
-                            aria-label={`Status for ${activity.title}`}
-                            value={draftStatus}
-                            className="h-8 w-32 text-xs"
-                            onChange={(event) =>
-                              setStatusDraft((current) => ({
-                                ...current,
-                                [activity.id]: event.target
-                                  .value as ActivityStatus,
-                              }))
-                            }
-                          >
-                            {EDITABLE_STATUSES.map((status) => (
-                              <option value={status} key={status}>
-                                {STATUS_LABELS[status]}
-                              </option>
-                            ))}
-                          </Select>
-                          {dirty ? (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              disabled={updateActivity.isPending}
-                              onClick={() => handleStatusUpdate(activity)}
-                            >
-                              Save
-                            </Button>
+                            {activity.source === 'GLOBAL' ? 'Global' : 'Custom'}
+                          </Badge>
+                          {!activity.isActive ? (
+                            <Badge tone="neutral">Inactive</Badge>
                           ) : null}
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="ml-auto"
-                            onClick={() => setRetractingId(activity.id)}
-                          >
-                            <Icon name="trash" size={12} />
-                            Retract
-                          </Button>
                         </div>
-                      )}
-                    </article>
-                  )
-                })}
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-600">
+                          {activity.description ?? activity.instructions}
+                        </p>
+                      </div>
+                      {!activity.isGlobal && activity.isActive ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            aria-label={`Edit ${activity.title}`}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                            onClick={() => startEditing(activity)}
+                            type="button"
+                          >
+                            <Icon name="edit" size={13} />
+                          </button>
+                          {deactivatingId === activity.id ? (
+                            <>
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => handleDeactivate(activity.id)}
+                                size="sm"
+                                variant="danger"
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => setDeactivatingId(null)}
+                                size="sm"
+                                variant="ghost"
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <button
+                              aria-label={`Deactivate ${activity.title}`}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                              onClick={() => setDeactivatingId(activity.id)}
+                              type="button"
+                            >
+                              <Icon name="trash" size={13} />
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                      <span>{categoryLabel(activity.category)}</span>
+                      {activity.developmentalArea ? (
+                        <span>{activity.developmentalArea}</span>
+                      ) : null}
+                      <span>{ageLabel(activity.minAge, activity.maxAge)}</span>
+                      <span>{activity.durationMinutes} min</span>
+                      {activity.difficultyLevel ? (
+                        <span>{activity.difficultyLevel.toLowerCase()}</span>
+                      ) : null}
+                      {activity.materials ? <span>{activity.materials}</span> : null}
+                    </div>
+                  </article>
+                ))}
               </div>
             ) : (
               <div className="p-4">
@@ -518,15 +404,217 @@ export function ActivitiesPage() {
                   compact
                   icon="activity"
                   title="No activities"
-                  description={
-                    statusFilter === 'ALL'
-                      ? 'Assigned activities will appear here.'
-                      : 'No activities with this status.'
-                  }
+                  description="Try a different source, category, or search term."
                 />
               </div>
             )}
           </CardBody>
+          <Pagination
+            label="Activities"
+            onPageChange={pager.setPage}
+            page={pager.page}
+            rangeEnd={pager.rangeEnd}
+            rangeStart={pager.rangeStart}
+            total={pager.total}
+            totalPages={pager.totalPages}
+          />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={editingActivity ? 'Edit custom activity' : 'Create custom activity'}
+            action={
+              <Badge tone={editingActivity ? 'info' : 'neutral'}>
+                {editingActivity ? 'Editing' : 'New'}
+              </Badge>
+            }
+          />
+          <form onSubmit={handleSubmit}>
+            <CardBody>
+              <div className="grid gap-4">
+                <Field label="Title" htmlFor="catalog-title">
+                  <Input
+                    disabled={isBusy}
+                    id="catalog-title"
+                    onChange={(event) => updateField('title', event.target.value)}
+                    placeholder="Activity title"
+                    value={form.title}
+                  />
+                </Field>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Category" htmlFor="catalog-category">
+                    <Select
+                      disabled={isBusy}
+                      id="catalog-category"
+                      onChange={(event) =>
+                        updateField('category', event.target.value)
+                      }
+                      value={form.category}
+                    >
+                      {CATEGORY_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {categoryLabel(option)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field
+                    label="Developmental area"
+                    htmlFor="catalog-area"
+                    optional
+                  >
+                    <Input
+                      disabled={isBusy}
+                      id="catalog-area"
+                      onChange={(event) =>
+                        updateField('developmentalArea', event.target.value)
+                      }
+                      placeholder="Fine Motor Coordination"
+                      value={form.developmentalArea}
+                    />
+                  </Field>
+                  <Field label="Min age (months)" htmlFor="catalog-min-age" optional>
+                    <Input
+                      disabled={isBusy}
+                      id="catalog-min-age"
+                      min={0}
+                      onChange={(event) =>
+                        updateField('minAge', event.target.value)
+                      }
+                      placeholder="36"
+                      type="number"
+                      value={form.minAge}
+                    />
+                  </Field>
+                  <Field label="Max age (months)" htmlFor="catalog-max-age" optional>
+                    <Input
+                      disabled={isBusy}
+                      id="catalog-max-age"
+                      min={0}
+                      onChange={(event) =>
+                        updateField('maxAge', event.target.value)
+                      }
+                      placeholder="84"
+                      type="number"
+                      value={form.maxAge}
+                    />
+                  </Field>
+                  <Field label="Duration" htmlFor="catalog-duration">
+                    <span className="relative block">
+                      <Input
+                        className="pr-9"
+                        disabled={isBusy}
+                        id="catalog-duration"
+                        min={1}
+                        onChange={(event) =>
+                          updateField('durationMinutes', event.target.value)
+                        }
+                        placeholder="15"
+                        type="number"
+                        value={form.durationMinutes}
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">
+                        min
+                      </span>
+                    </span>
+                  </Field>
+                  <Field label="Difficulty" htmlFor="catalog-difficulty">
+                    <Select
+                      disabled={isBusy}
+                      id="catalog-difficulty"
+                      onChange={(event) =>
+                        updateField('difficultyLevel', event.target.value)
+                      }
+                      value={form.difficultyLevel}
+                    >
+                      {DIFFICULTY_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option.toLowerCase()}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+
+                <Field label="Instructions" htmlFor="catalog-instructions">
+                  <Textarea
+                    disabled={isBusy}
+                    id="catalog-instructions"
+                    onChange={(event) =>
+                      updateField('instructions', event.target.value)
+                    }
+                    placeholder="Step-by-step instructions"
+                    rows={4}
+                    value={form.instructions}
+                  />
+                </Field>
+
+                <Field label="Description" htmlFor="catalog-description" optional>
+                  <Textarea
+                    disabled={isBusy}
+                    id="catalog-description"
+                    onChange={(event) =>
+                      updateField('description', event.target.value)
+                    }
+                    placeholder="Short summary"
+                    rows={2}
+                    value={form.description}
+                  />
+                </Field>
+
+                <Field label="Materials" htmlFor="catalog-materials" optional>
+                  <Input
+                    disabled={isBusy}
+                    id="catalog-materials"
+                    onChange={(event) =>
+                      updateField('materials', event.target.value)
+                    }
+                    placeholder="Large beads and cord"
+                    value={form.materials}
+                  />
+                </Field>
+              </div>
+            </CardBody>
+            <div className="flex items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+              {editingActivity ? (
+                <Button
+                  disabled={isBusy}
+                  onClick={resetForm}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Cancel
+                </Button>
+              ) : (
+                <Button
+                  disabled={isBusy}
+                  onClick={resetForm}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                aria-busy={isBusy}
+                block
+                disabled={isBusy}
+                size="sm"
+                type="submit"
+                variant="primary"
+              >
+                <Icon name="check" size={13} />
+                {isBusy
+                  ? 'Saving…'
+                  : editingActivity
+                    ? 'Save changes'
+                    : 'Create activity'}
+              </Button>
+            </div>
+          </form>
         </Card>
       </div>
     </div>

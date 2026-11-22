@@ -75,4 +75,6 @@ export type CreateClinicalNoteRequest = {
   content: string
   bookingId?: string
   recommendation?: string
+  activityIds?: string[]
+  specialistNotes?: Record<string, string>
 }

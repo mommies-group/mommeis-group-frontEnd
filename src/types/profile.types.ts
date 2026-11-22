@@ -6,6 +6,13 @@ export type SpecialistProfile = {
   licenseNumber: string | null
   phone: string | null
   bio: string | null
+  specialties?: string[]
+  profileImageUrl?: string | null
+  yearsExperience?: number | null
+  consultationFee?: number | null
+  sessionFee?: number | null
+  currency?: string | null
+  verificationStatus?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -18,6 +25,14 @@ export type UpdateProfileRequest = {
   bio?: string | null
   email?: string
 }
+
+export type Pricing = {
+  consultationFee: number
+  sessionFee: number
+  currency: string
+}
+
+export type UpdatePricingRequest = Partial<Pricing>
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6
 

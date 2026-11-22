@@ -120,9 +120,16 @@ jest.mock('../src/hooks/queries/clinical-notes/clinical-notes.queries', () => ({
   useClinicalNotes: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
-jest.mock('../src/hooks/queries/activities/activities.queries', () => ({
-  useActivities: () => ({ data: [], isLoading: false, isError: false }),
-}))
+jest.mock(
+  '../src/hooks/queries/activities/activity-catalog.queries',
+  () => ({
+    useCatalogActivities: () => ({
+      data: [],
+      isLoading: false,
+      isError: false,
+    }),
+  }),
+)
 
 jest.mock('../src/hooks/queries/patients/patients.queries', () => ({
   usePatients: () => ({ data: [], isLoading: false, isError: false }),

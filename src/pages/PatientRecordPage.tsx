@@ -7,9 +7,11 @@ import { buttonStyles } from '../components/ui/buttonStyles'
 import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import { SourceBadge, type DataSource } from '../components/ui/SourceBadge'
 import { useClinicalRecord } from '../hooks/queries/patients/patients.queries'
+import { usePagination } from '../hooks/use-pagination'
 import {
   getApiErrorMessage,
   getApiErrorCode,
@@ -75,6 +77,31 @@ export function PatientRecordPage() {
   const [searchParams] = useSearchParams()
   const childId = searchParams.get('childId')
   const record = useClinicalRecord(childId)
+  const milestonesPager = usePagination(
+    record.data?.milestones ?? [],
+    5,
+    'record-milestones',
+  )
+  const observationsPager = usePagination(
+    record.data?.observations ?? [],
+    5,
+    'record-observations',
+  )
+  const assessmentsPager = usePagination(
+    record.data?.assessments ?? [],
+    5,
+    'record-assessments',
+  )
+  const triagePager = usePagination(
+    record.data?.triageHistory ?? [],
+    5,
+    'record-triage',
+  )
+  const notesPager = usePagination(
+    record.data?.clinicalNotes ?? [],
+    5,
+    'record-notes',
+  )
   const accessError = record.isError && isAccessError(record.error)
 
   const pageTitle = record.data
@@ -223,7 +250,7 @@ export function PatientRecordPage() {
           >
             {record.data.milestones.length > 0 ? (
               <ol className="relative grid gap-3 border-l border-slate-200 pl-4">
-                {record.data.milestones.map((milestone) => (
+                {milestonesPager.visibleItems.map((milestone) => (
                   <li className="relative" key={milestone.id}>
                     <span
                       className="absolute -left-[22px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-teal-600"
@@ -244,6 +271,16 @@ export function PatientRecordPage() {
             ) : (
               <EmptyState compact icon="sparkles" title="No milestones" />
             )}
+            <Pagination
+              compact
+              label="Milestones"
+              onPageChange={milestonesPager.setPage}
+              page={milestonesPager.page}
+              rangeEnd={milestonesPager.rangeEnd}
+              rangeStart={milestonesPager.rangeStart}
+              total={milestonesPager.total}
+              totalPages={milestonesPager.totalPages}
+            />
           </RecordSection>
 
           <RecordSection
@@ -253,7 +290,7 @@ export function PatientRecordPage() {
           >
             {record.data.observations.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {record.data.observations.map((observation) => (
+                {observationsPager.visibleItems.map((observation) => (
                   <div className="py-2.5 first:pt-0 last:pb-0" key={observation.id}>
                     <p className="whitespace-pre-wrap text-[11px] leading-5 text-slate-700">
                       {observation.content}
@@ -267,6 +304,16 @@ export function PatientRecordPage() {
             ) : (
               <EmptyState compact icon="message" title="No observations" />
             )}
+            <Pagination
+              compact
+              label="Observations"
+              onPageChange={observationsPager.setPage}
+              page={observationsPager.page}
+              rangeEnd={observationsPager.rangeEnd}
+              rangeStart={observationsPager.rangeStart}
+              total={observationsPager.total}
+              totalPages={observationsPager.totalPages}
+            />
           </RecordSection>
 
           <RecordSection
@@ -291,7 +338,7 @@ export function PatientRecordPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {record.data.assessments.map((assessment) => (
+                    {assessmentsPager.visibleItems.map((assessment) => (
                       <tr key={assessment.id}>
                         <td className="py-2 text-xs font-medium text-slate-800">
                           {assessment.gameName}
@@ -310,6 +357,16 @@ export function PatientRecordPage() {
             ) : (
               <EmptyState compact icon="activity" title="No assessments" />
             )}
+            <Pagination
+              compact
+              label="Assessments"
+              onPageChange={assessmentsPager.setPage}
+              page={assessmentsPager.page}
+              rangeEnd={assessmentsPager.rangeEnd}
+              rangeStart={assessmentsPager.rangeStart}
+              total={assessmentsPager.total}
+              totalPages={assessmentsPager.totalPages}
+            />
           </RecordSection>
 
           <RecordSection
@@ -319,7 +376,7 @@ export function PatientRecordPage() {
           >
             {record.data.triageHistory.length > 0 ? (
               <div className="grid gap-2">
-                {record.data.triageHistory.map((triage) => (
+                {triagePager.visibleItems.map((triage) => (
                   <div
                     className="rounded-lg border border-violet-100 bg-violet-50/50 p-2.5"
                     key={triage.id}
@@ -339,6 +396,16 @@ export function PatientRecordPage() {
             ) : (
               <EmptyState compact icon="sparkles" title="No triage entries" />
             )}
+            <Pagination
+              compact
+              label="Triage history"
+              onPageChange={triagePager.setPage}
+              page={triagePager.page}
+              rangeEnd={triagePager.rangeEnd}
+              rangeStart={triagePager.rangeStart}
+              total={triagePager.total}
+              totalPages={triagePager.totalPages}
+            />
           </RecordSection>
 
           <RecordSection
@@ -349,7 +416,7 @@ export function PatientRecordPage() {
           >
             {record.data.clinicalNotes.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {record.data.clinicalNotes.map((note) => (
+                {notesPager.visibleItems.map((note) => (
                   <article className="py-2.5 first:pt-0 last:pb-0" key={note.id}>
                     <p className="whitespace-pre-wrap text-[11px] leading-5 text-slate-700">
                       {note.content}
@@ -368,6 +435,16 @@ export function PatientRecordPage() {
             ) : (
               <EmptyState compact icon="notes" title="No clinical notes" />
             )}
+            <Pagination
+              compact
+              label="Clinical notes"
+              onPageChange={notesPager.setPage}
+              page={notesPager.page}
+              rangeEnd={notesPager.rangeEnd}
+              rangeStart={notesPager.rangeStart}
+              total={notesPager.total}
+              totalPages={notesPager.totalPages}
+            />
           </RecordSection>
         </div>
       ) : null}

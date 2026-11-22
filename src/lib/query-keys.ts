@@ -33,9 +33,33 @@ export const queryKeys = {
     notes: (childId: string) =>
       [...queryKeys.patients.all, 'notes', childId] as const,
   },
-  activities: {
-    all: ['activities'] as const,
-    list: ['activities', 'list'] as const,
+  activityCatalog: {
+    all: ['activity-catalog'] as const,
+    lists: () => [...queryKeys.activityCatalog.all, 'list'] as const,
+    list: (filters: {
+      source?: string
+      category?: string
+      developmentalArea?: string
+      ageMonths?: number
+      search?: string
+    }) =>
+      [
+        ...queryKeys.activityCatalog.lists(),
+        filters.source ?? 'all',
+        filters.category ?? 'all',
+        filters.developmentalArea ?? 'all',
+        filters.ageMonths ?? 'all',
+        filters.search ?? '',
+      ] as const,
+    details: () => [...queryKeys.activityCatalog.all, 'detail'] as const,
+    detail: (id: string) =>
+      [...queryKeys.activityCatalog.details(), id] as const,
+    noteActivities: (noteId: string) =>
+      [...queryKeys.activityCatalog.all, 'note', noteId] as const,
+  },
+  pricing: {
+    all: ['pricing'] as const,
+    detail: ['pricing', 'detail'] as const,
   },
   profile: {
     all: ['profile'] as const,

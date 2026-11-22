@@ -9,6 +9,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
   useApproveBooking,
@@ -16,6 +17,7 @@ import {
 } from '../hooks/mutations/bookings/bookings.mutations'
 import { useDashboardSummary } from '../hooks/queries/dashboard/dashboard.queries'
 import { usePendingBookings } from '../hooks/queries/bookings/bookings.queries'
+import { usePagination } from '../hooks/use-pagination'
 import { formatDateTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import { bookingReviewPath, ROUTES } from '../router/routes'
@@ -62,6 +64,21 @@ export function DashboardPage() {
   const [rejectReason, setRejectReason] = useState('')
   const data = summary.data
   const nextAppointment = data?.upcomingAppointments[0]
+  const upcomingPager = usePagination(
+    data?.upcomingAppointments ?? [],
+    5,
+    'dashboard-upcoming',
+  )
+  const activityPager = usePagination(
+    data?.recentActivities ?? [],
+    5,
+    'dashboard-activity',
+  )
+  const pendingPager = usePagination(
+    pendingBookings.data ?? [],
+    5,
+    'dashboard-pending',
+  )
   const isMutatingBooking = approveBooking.isPending || rejectBooking.isPending
 
   const handleApprove = (booking: Booking) => {
@@ -219,7 +236,7 @@ export function DashboardPage() {
                 </div>
               ) : data && data.upcomingAppointments.length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {data.upcomingAppointments.map((appointment) => (
+                  {upcomingPager.visibleItems.map((appointment) => (
                     <Link
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
                       to={bookingReviewPath(appointment.id)}
@@ -251,6 +268,16 @@ export function DashboardPage() {
                 </div>
               )}
             </CardBody>
+            <Pagination
+              compact
+              label="Upcoming appointments"
+              onPageChange={upcomingPager.setPage}
+              page={upcomingPager.page}
+              rangeEnd={upcomingPager.rangeEnd}
+              rangeStart={upcomingPager.rangeStart}
+              total={upcomingPager.total}
+              totalPages={upcomingPager.totalPages}
+            />
           </Card>
 
           <Card>
@@ -275,7 +302,7 @@ export function DashboardPage() {
                 </div>
               ) : data && data.recentActivities.length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {data.recentActivities.map((activity) => (
+                  {activityPager.visibleItems.map((activity) => (
                     <div
                       className="flex items-center gap-3 px-4 py-2.5"
                       key={`${activity.type}-${activity.id}`}
@@ -306,6 +333,16 @@ export function DashboardPage() {
                 </div>
               )}
             </CardBody>
+            <Pagination
+              compact
+              label="Recent activity"
+              onPageChange={activityPager.setPage}
+              page={activityPager.page}
+              rangeEnd={activityPager.rangeEnd}
+              rangeStart={activityPager.rangeStart}
+              total={activityPager.total}
+              totalPages={activityPager.totalPages}
+            />
           </Card>
         </div>
 
@@ -340,7 +377,7 @@ export function DashboardPage() {
               </div>
             ) : pendingBookings.data && pendingBookings.data.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {pendingBookings.data.slice(0, 5).map((booking) => {
+                {pendingPager.visibleItems.map((booking) => {
                   const childName = `${booking.child.firstName} ${booking.child.lastName}`
                   const awaitingParent = booking.proposals?.[0]?.status === 'PENDING'
 
@@ -447,6 +484,16 @@ export function DashboardPage() {
               </div>
             )}
           </CardBody>
+          <Pagination
+            compact
+            label="Pending requests"
+            onPageChange={pendingPager.setPage}
+            page={pendingPager.page}
+            rangeEnd={pendingPager.rangeEnd}
+            rangeStart={pendingPager.rangeStart}
+            total={pendingPager.total}
+            totalPages={pendingPager.totalPages}
+          />
         </Card>
       </div>
     </div>

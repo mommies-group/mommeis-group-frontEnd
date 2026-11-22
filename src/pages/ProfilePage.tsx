@@ -11,8 +11,14 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Field, Input, Textarea } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Skeleton } from '../components/ui/Skeleton'
-import { useUpdateProfile } from '../hooks/mutations/profile/profile.mutations'
-import { useProfile } from '../hooks/queries/profile/profile.queries'
+import {
+  useUpdatePricing,
+  useUpdateProfile,
+} from '../hooks/mutations/profile/profile.mutations'
+import {
+  usePricing,
+  useProfile,
+} from '../hooks/queries/profile/profile.queries'
 import { notifyError, notifySuccess } from '../lib/toast'
 import { ROUTES } from '../router/routes'
 
@@ -26,11 +32,32 @@ const emptyForm: ProfileForm = {
   bio: '',
 }
 
+type PricingForm = {
+  consultationFee: string
+  sessionFee: string
+  currency: string
+}
+
+const emptyPricingForm: PricingForm = {
+  consultationFee: '',
+  sessionFee: '',
+  currency: '',
+}
+
+// Keep the native stepper anchored to the current value so every arrow click
+// adds/subtracts exactly 10, even when the saved fee is not a multiple of 10.
+const feeStepBase = (value: string) =>
+  Math.max(0, (Number(value) || 0) - 10)
+
 export function ProfilePage() {
   const profile = useProfile()
+  const pricing = usePricing()
   const updateProfile = useUpdateProfile()
+  const updatePricing = useUpdatePricing()
   const [form, setForm] = useState<ProfileForm>(emptyForm)
+  const [pricingForm, setPricingForm] = useState<PricingForm>(emptyPricingForm)
   const initialized = useRef(false)
+  const pricingInitialized = useRef(false)
 
   useEffect(() => {
     if (profile.data && !initialized.current) {
@@ -41,6 +68,17 @@ export function ProfilePage() {
       })
     }
   }, [profile.data])
+
+  useEffect(() => {
+    if (pricing.data && !pricingInitialized.current) {
+      pricingInitialized.current = true
+      setPricingForm({
+        consultationFee: String(pricing.data.consultationFee),
+        sessionFee: String(pricing.data.sessionFee),
+        currency: pricing.data.currency,
+      })
+    }
+  }, [pricing.data])
 
   const dirty =
     Boolean(profile.data) &&
@@ -68,6 +106,52 @@ export function ProfilePage() {
             bio: updated.bio ?? '',
           })
           notifySuccess('Profile saved.')
+        },
+        onError: (error) => notifyError(error),
+      },
+    )
+  }
+
+  const pricingDirty =
+    Boolean(pricing.data) &&
+    (pricingForm.consultationFee !== String(pricing.data?.consultationFee) ||
+      pricingForm.sessionFee !== String(pricing.data?.sessionFee))
+
+  const updatePricingField = (field: keyof PricingForm, value: string) => {
+    setPricingForm((current) => ({ ...current, [field]: value }))
+    updatePricing.reset()
+  }
+
+  const handlePricingSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    updatePricing.reset()
+
+    const consultationFee = Number(pricingForm.consultationFee)
+    const sessionFee = Number(pricingForm.sessionFee)
+
+    if (
+      !Number.isFinite(consultationFee) ||
+      !Number.isFinite(sessionFee) ||
+      consultationFee < 0 ||
+      sessionFee < 0
+    ) {
+      notifyError(null, 'Enter valid fees.')
+      return
+    }
+
+    updatePricing.mutate(
+      {
+        consultationFee,
+        sessionFee,
+      },
+      {
+        onSuccess: (updated) => {
+          setPricingForm({
+            consultationFee: String(updated.consultationFee),
+            sessionFee: String(updated.sessionFee),
+            currency: updated.currency,
+          })
+          notifySuccess('Pricing saved.')
         },
         onError: (error) => notifyError(error),
       },
@@ -118,22 +202,47 @@ export function ProfilePage() {
       ) : null}
 
       {profile.data ? (
-        <form id="profile-form" onSubmit={handleSubmit}>
+        <div>
           <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
             <div className="flex flex-col gap-5">
               <Card>
                 <CardBody>
                   <div className="flex flex-col items-center text-center">
-                    <Avatar size="lg" label="Specialist profile" />
+                    <Avatar
+                      size="lg"
+                      label="Specialist profile"
+                      src={profile.data.profileImageUrl}
+                    />
                     <p className="mt-3 text-sm font-semibold text-slate-900">
                       {profile.data.fullName}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {profile.data.specialty}
                     </p>
+                    {profile.data.specialties?.length ? (
+                      <div className="mt-2 flex flex-wrap justify-center gap-1">
+                        {profile.data.specialties.map((specialty) => (
+                          <Badge key={specialty} tone="info">
+                            {specialty}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                     <p className="mt-1 max-w-full truncate text-[11px] text-slate-500">
                       {profile.data.email}
                     </p>
+                    {profile.data.verificationStatus ? (
+                      <Badge
+                        className="mt-2"
+                        tone={
+                          profile.data.verificationStatus === 'VERIFIED'
+                            ? 'success'
+                            : 'neutral'
+                        }
+                      >
+                        {profile.data.verificationStatus}
+                      </Badge>
+                    ) : null}
                   </div>
                 </CardBody>
               </Card>
@@ -166,6 +275,28 @@ export function ProfilePage() {
                 </CardBody>
               </Card>
 
+              <Card>
+                <CardHeader title="Practice" />
+                <CardBody>
+                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+                      <Icon name="briefcase" size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        Experience
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-700">
+                        {profile.data.yearsExperience !== null &&
+                        profile.data.yearsExperience !== undefined
+                          ? `${profile.data.yearsExperience} years`
+                          : 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
               <Link
                 className={buttonStyles({ variant: 'secondary', size: 'sm' })}
                 to={ROUTES.availability}
@@ -176,9 +307,14 @@ export function ProfilePage() {
             </div>
 
             <div className="flex flex-col gap-5">
-              <Card>
-                <CardHeader
-                  title="Account"
+              <form
+                className="flex flex-col gap-5"
+                id="profile-form"
+                onSubmit={handleSubmit}
+              >
+                <Card>
+                  <CardHeader
+                    title="Account"
                   action={
                     dirty ? (
                       <Badge tone="info" dot>
@@ -260,9 +396,102 @@ export function ProfilePage() {
                   </Field>
                 </CardBody>
               </Card>
+              </form>
+
+              <Card>
+                <CardHeader
+                  title="Pricing"
+                  action={
+                    pricingDirty ? (
+                      <Badge tone="info" dot>
+                        Unsaved changes
+                      </Badge>
+                    ) : (
+                      <Badge tone="neutral">Saved</Badge>
+                    )
+                  }
+                />
+                <form
+                  id="pricing-form"
+                  noValidate
+                  onSubmit={handlePricingSubmit}
+                >
+                  <CardBody>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Field
+                        label="Consultation fee"
+                        htmlFor="pricing-consultation"
+                      >
+                        <Input
+                          disabled={updatePricing.isPending || !pricing.data}
+                          id="pricing-consultation"
+                          min={feeStepBase(pricingForm.consultationFee)}
+                          onChange={(event) =>
+                            updatePricingField(
+                              'consultationFee',
+                              event.target.value,
+                            )
+                          }
+                          step="10"
+                          type="number"
+                          value={pricingForm.consultationFee}
+                        />
+                      </Field>
+                      <Field label="Session fee" htmlFor="pricing-session">
+                        <Input
+                          disabled={updatePricing.isPending || !pricing.data}
+                          id="pricing-session"
+                          min={feeStepBase(pricingForm.sessionFee)}
+                          onChange={(event) =>
+                            updatePricingField('sessionFee', event.target.value)
+                          }
+                          step="10"
+                          type="number"
+                          value={pricingForm.sessionFee}
+                        />
+                      </Field>
+                      <Field label="Currency" htmlFor="pricing-currency">
+                        <Input
+                          disabled
+                          id="pricing-currency"
+                          placeholder="EGP"
+                          value={pricingForm.currency}
+                        />
+                      </Field>
+                    </div>
+                    {pricing.isError ? (
+                      <div className="mt-3">
+                        <ApiErrorNotice
+                          error={pricing.error}
+                          title="Could not load pricing"
+                          onRetry={() => {
+                            void pricing.refetch()
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </CardBody>
+                  <div className="flex justify-end border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+                    <Button
+                      aria-busy={updatePricing.isPending}
+                      disabled={
+                        !pricingDirty ||
+                        !pricing.data ||
+                        updatePricing.isPending
+                      }
+                      size="sm"
+                      type="submit"
+                      variant="primary"
+                    >
+                      <Icon name="check" size={13} />
+                      {updatePricing.isPending ? 'Saving…' : 'Save pricing'}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
             </div>
           </div>
-        </form>
+        </div>
       ) : null}
     </div>
   )
