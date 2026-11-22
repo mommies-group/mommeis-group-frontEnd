@@ -90,8 +90,12 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
         </nav>
 
         <div className="shrink-0 border-t border-slate-200 p-3">
-          <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
-            <Avatar size="sm" label="Signed-in specialist" />
+          <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+            <Avatar
+              size="sm"
+              label="Signed-in specialist"
+              src={currentUser.data?.profileImageUrl}
+            />
             <div className="min-w-0 flex-1">
               {currentUser.isLoading ? (
                 <div className="grid gap-1.5">
@@ -119,11 +123,6 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
               <Icon name="logout" size={15} />
             </button>
           </div>
-
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
-            <Icon name="shield" size={11} />
-            Specialist workspace
-          </p>
         </div>
       </div>
     </aside>
