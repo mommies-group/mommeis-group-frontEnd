@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/icons/Icon'
-import { BookingReviewPanel } from '../components/bookings/BookingReviewPanel'
+import { BookingReviewModal } from '../components/bookings/BookingReviewModal'
 import { BookingStatusBadge } from '../components/bookings/bookingStatus'
 import { bookingStatusLabels } from '../components/bookings/bookingStatusMeta'
 import { MonthCalendar } from '../components/bookings/MonthCalendar'
@@ -31,8 +31,6 @@ export function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [monthOffset, setMonthOffset] = useState(0)
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
-  const reviewRef = useRef<HTMLDivElement>(null)
-  const hasScrolledToLinkedBooking = useRef(false)
   const range = monthRange(monthOffset)
 
   const selectedBookingId = searchParams.get('bookingId')
@@ -46,19 +44,6 @@ export function BookingsPage() {
     bookings.data?.find((booking) => booking.id === selectedBookingId) ??
     linkedBooking.data ??
     null
-
-  useEffect(() => {
-    if (!selectedBookingId || hasScrolledToLinkedBooking.current) {
-      return
-    }
-
-    hasScrolledToLinkedBooking.current = true
-    const scrollTimer = window.setTimeout(() => {
-      reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 50)
-
-    return () => window.clearTimeout(scrollTimer)
-  }, [selectedBookingId])
 
   const allEvents = useMemo(() => calendar.data?.events ?? [], [calendar.data])
   const sortedEvents = useMemo(() => {
@@ -238,29 +223,28 @@ export function BookingsPage() {
         </Card>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.9fr)]">
-        <Card>
-          <CardHeader
-            title="Bookings"
-            action={
-              <Select
-                aria-label="Filter bookings by status"
-                value={statusFilter}
-                onChange={(event) =>
-                  handleStatusChange(event.target.value as StatusFilter)
-                }
-                className="h-8 w-40 text-xs"
-              >
-                <option value="ALL">All statuses</option>
-                {BOOKING_STATUSES.map((status) => (
-                  <option value={status} key={status}>
-                    {bookingStatusLabels[status]}
-                  </option>
-                ))}
-              </Select>
+      <Card>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+            Bookings
+          </h2>
+          <Select
+            aria-label="Filter bookings by status"
+            value={statusFilter}
+            onChange={(event) =>
+              handleStatusChange(event.target.value as StatusFilter)
             }
-          />
-          <CardBody flush>
+            className="h-8 w-40 shrink-0 text-xs"
+          >
+            <option value="ALL">All statuses</option>
+            {BOOKING_STATUSES.map((status) => (
+              <option value={status} key={status}>
+                {bookingStatusLabels[status]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <CardBody flush>
             {bookings.isLoading ? (
               <div className="grid gap-2 p-4">
                 {[0, 1, 2].map((item) => (
@@ -318,7 +302,9 @@ export function BookingsPage() {
                       <Icon
                         name="chevron-right"
                         size={14}
-                        className={selected ? 'text-teal-700' : 'text-slate-400'}
+                        className={`self-center ${
+                          selected ? 'text-teal-700' : 'text-slate-400'
+                        }`}
                       />
                     </button>
                   )
@@ -349,13 +335,12 @@ export function BookingsPage() {
           />
         </Card>
 
-        <div ref={reviewRef} className="min-w-0 scroll-mt-24">
-          <BookingReviewPanel
-            key={selectedBooking?.id ?? 'no-booking'}
-            booking={selectedBooking}
-          />
-        </div>
-      </div>
+      <BookingReviewModal
+        open={Boolean(selectedBookingId)}
+        booking={selectedBooking}
+        isLoading={Boolean(selectedBookingId) && linkedBooking.isLoading && !selectedBooking}
+        onClose={() => selectBooking(null)}
+      />
     </div>
   )
 }

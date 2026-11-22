@@ -8,7 +8,6 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Field, Input, Select } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
-import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
   useCreateAvailabilitySlot,
@@ -16,7 +15,6 @@ import {
   useUpdateAvailabilitySlot,
 } from '../hooks/mutations/profile/profile.mutations'
 import { useAvailability } from '../hooks/queries/profile/profile.queries'
-import { usePagination } from '../hooks/use-pagination'
 import { formatClockTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
@@ -80,8 +78,6 @@ function DaySlotsRow({
   onCancelDelete,
   onStatusChange,
 }: DaySlotsRowProps) {
-  const pager = usePagination(slots, 5, `availability-${item.value}`)
-
   return (
     <div className="grid gap-2 px-4 py-3 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-start">
       <div className="flex items-center gap-2">
@@ -96,7 +92,7 @@ function DaySlotsRow({
       <div className="min-w-0">
         <div className="flex min-h-9 flex-wrap items-center gap-2">
           {slots.length > 0 ? (
-            pager.visibleItems.map((slot) => {
+            slots.map((slot) => {
               const currentStatus = slotStatus(slot)
               return (
                 <div
@@ -173,16 +169,6 @@ function DaySlotsRow({
             <span className="text-[11px] text-slate-500">No slots</span>
           )}
         </div>
-        <Pagination
-          compact
-          label={`${item.label} slots`}
-          onPageChange={pager.setPage}
-          page={pager.page}
-          rangeEnd={pager.rangeEnd}
-          rangeStart={pager.rangeStart}
-          total={pager.total}
-          totalPages={pager.totalPages}
-        />
       </div>
     </div>
   )

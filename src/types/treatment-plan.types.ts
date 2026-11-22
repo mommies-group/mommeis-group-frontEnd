@@ -1,11 +1,13 @@
 export type TreatmentPlanStatus =
   | 'DRAFT'
   | 'PENDING_MOTHER_APPROVAL'
+  | 'MODIFICATION_REQUESTED'
+  | 'APPROVED'
+  | 'PENDING_PAYMENT'
   | 'ACTIVE'
   | 'COMPLETED'
-  | 'REJECTED'
-  | 'EXPIRED'
   | 'CANCELLED'
+  | 'DECLINED'
 
 export type TreatmentSessionStatus =
   | 'SCHEDULED'
@@ -55,13 +57,28 @@ export type TreatmentPlan = {
 export type TreatmentPlanInvoice = {
   invoiceNumber: string
   totalAmount: number
+  sessionCount?: number
+  sessionFee?: number
+  subtotal?: number
+  discount?: number
+  currency?: string
+  status?: string
+  paymentStatus?: string
   [key: string]: unknown
 }
 
 export type TreatmentPlanListItem = TreatmentPlan
 
+export type TreatmentPlanPagination = {
+  page?: number
+  limit?: number
+  total?: number
+  totalPages?: number
+}
+
 export type TreatmentPlanList = {
   items: TreatmentPlanListItem[]
+  pagination?: TreatmentPlanPagination
   page?: number
   limit?: number
   total?: number
@@ -91,6 +108,8 @@ export type CreateTreatmentPlanRequest = {
 
 export type UpdateTreatmentPlanRequest = {
   title?: string
+  description?: string
+  treatmentGoals?: string
   totalSessions?: number
   sessionFee?: number
   sessions?: TreatmentPlanSessionDraft[]

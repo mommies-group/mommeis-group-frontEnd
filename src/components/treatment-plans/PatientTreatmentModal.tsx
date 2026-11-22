@@ -1,59 +1,64 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Icon } from '../icons/Icon'
-import { ApiErrorNotice } from '../ui/ApiErrorNotice'
-import { Button } from '../ui/Button'
-import { buttonStyles } from '../ui/buttonStyles'
-import { EmptyState } from '../ui/EmptyState'
-import { Pagination } from '../ui/Pagination'
-import { Spinner } from '../ui/Spinner'
-import { TreatmentPlanDetailModal } from './TreatmentPlanDetailModal'
-import { StatusBadge } from './treatment-plan-status'
-import { useTreatmentPlans } from '../../hooks/queries/treatment-plans/treatment-plans.queries'
-import { formatDateTime } from '../../lib/format'
-import { treatmentPlansCreatePath } from '../../router/routes'
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Icon } from "../icons/Icon";
+import { ApiErrorNotice } from "../ui/ApiErrorNotice";
+import { Button } from "../ui/Button";
+import { buttonStyles } from "../ui/buttonStyles";
+import { EmptyState } from "../ui/EmptyState";
+import { Pagination } from "../ui/Pagination";
+import { Spinner } from "../ui/Spinner";
+import { TreatmentPlanDetailModal } from "./TreatmentPlanDetailModal";
+import { StatusBadge } from "./treatment-plan-status";
+import { useTreatmentPlans } from "../../hooks/queries/treatment-plans/treatment-plans.queries";
+import { formatDateTime } from "../../lib/format";
+import { treatmentPlansCreatePath } from "../../router/routes";
 
 type PatientTreatmentModalProps = {
-  open: boolean
-  childId: string
-  onClose: () => void
-}
+  open: boolean;
+  childId: string;
+  onClose: () => void;
+};
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 5;
 
 export function PatientTreatmentModal({
   open,
   childId,
   onClose,
 }: PatientTreatmentModalProps) {
-  const [page, setPage] = useState(1)
-  const [detailId, setDetailId] = useState<string | null>(null)
-  const plans = useTreatmentPlans(open ? page : 1, PAGE_SIZE, { childId })
+  const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const plans = useTreatmentPlans(open ? page : 1, PAGE_SIZE, { childId });
 
   useEffect(() => {
     if (!open) {
-      return
+      return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !detailId) {
-        onClose()
+      if (event.key === "Escape" && !detailId) {
+        onClose();
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, detailId, onClose])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, detailId, onClose]);
 
   if (!open) {
-    return null
+    return null;
   }
 
-  const items = plans.data?.items ?? []
-  const total = plans.data?.total ?? items.length
-  const totalPages = plans.data?.totalPages ?? Math.ceil(total / PAGE_SIZE)
-  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(page * PAGE_SIZE, total)
+  const items = plans.data?.items ?? [];
+  const pagination = plans.data?.pagination;
+  const total = pagination?.total ?? plans.data?.total ?? items.length;
+  const totalPages =
+    pagination?.totalPages ??
+    plans.data?.totalPages ??
+    Math.ceil(total / PAGE_SIZE);
+  const currentPage = pagination?.page ?? page;
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, total);
 
   return (
     <>
@@ -99,7 +104,7 @@ export function PatientTreatmentModal({
                 error={plans.error}
                 title="Could not load treatment plans"
                 onRetry={() => {
-                  void plans.refetch()
+                  void plans.refetch();
                 }}
               />
             ) : items.length ? (
@@ -118,7 +123,7 @@ export function PatientTreatmentModal({
                           <StatusBadge status={plan.status} />
                         </div>
                         <p className="mt-1 text-[10px] text-slate-500">
-                          {plan.totalSessions} sessions ·{' '}
+                          {plan.totalSessions} sessions ·{" "}
                           {formatDateTime(plan.createdAt)}
                         </p>
                       </div>
@@ -141,7 +146,7 @@ export function PatientTreatmentModal({
                 description="This patient has no treatment plans yet."
                 action={
                   <Link
-                    className={buttonStyles({ variant: 'primary', size: 'sm' })}
+                    className={buttonStyles({ variant: "primary", size: "sm" })}
                     to={treatmentPlansCreatePath(childId)}
                     onClick={onClose}
                   >
@@ -164,7 +169,6 @@ export function PatientTreatmentModal({
               totalPages={totalPages}
             />
           ) : null}
-
         </div>
       </div>
 
@@ -178,5 +182,5 @@ export function PatientTreatmentModal({
         />
       ) : null}
     </>
-  )
+  );
 }

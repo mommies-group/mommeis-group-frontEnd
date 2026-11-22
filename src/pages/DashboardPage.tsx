@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon, type IconName } from '../components/icons/Icon'
+import { BookingReviewModal } from '../components/bookings/BookingReviewModal'
 import { BookingStatusBadge } from '../components/bookings/bookingStatus'
 import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
 import { Badge } from '../components/ui/Badge'
@@ -16,11 +17,14 @@ import {
   useRejectBooking,
 } from '../hooks/mutations/bookings/bookings.mutations'
 import { useDashboardSummary } from '../hooks/queries/dashboard/dashboard.queries'
-import { usePendingBookings } from '../hooks/queries/bookings/bookings.queries'
+import {
+  useBookingById,
+  usePendingBookings,
+} from '../hooks/queries/bookings/bookings.queries'
 import { usePagination } from '../hooks/use-pagination'
 import { formatDateTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
-import { bookingReviewPath, ROUTES } from '../router/routes'
+import { ROUTES } from '../router/routes'
 import type { Booking } from '../types/booking.types'
 
 type SummaryCardProps = {
@@ -28,15 +32,22 @@ type SummaryCardProps = {
   icon: IconName
   value: ReactNode
   hint: string
-  href: string
+  href?: string
+  onOpen?: () => void
 }
 
-function SummaryCard({ label, icon, value, hint, href }: SummaryCardProps) {
-  return (
-    <Link
-      className="group flex min-w-0 flex-col rounded-xl border border-slate-300 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-      to={href}
-    >
+function SummaryCard({
+  label,
+  icon,
+  value,
+  hint,
+  href,
+  onOpen,
+}: SummaryCardProps) {
+  const className =
+    'group flex min-w-0 flex-col rounded-xl border border-slate-300 bg-white p-4 text-left shadow-sm transition hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600'
+  const content = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-[11px] font-semibold text-slate-500">
           {label}
@@ -49,6 +60,20 @@ function SummaryCard({ label, icon, value, hint, href }: SummaryCardProps) {
         {value}
       </span>
       <p className="mt-0.5 truncate text-[10px] text-slate-500">{hint}</p>
+    </>
+  )
+
+  if (onOpen) {
+    return (
+      <button type="button" className={className} onClick={onOpen}>
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link className={className} to={href ?? ROUTES.dashboard}>
+      {content}
     </Link>
   )
 }
@@ -62,8 +87,15 @@ export function DashboardPage() {
     null,
   )
   const [rejectReason, setRejectReason] = useState('')
+  const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
+  const linkedReviewBooking = useBookingById(reviewBookingId)
   const data = summary.data
   const nextAppointment = data?.upcomingAppointments[0]
+  const firstPendingId = pendingBookings.data?.[0]?.id ?? null
+  const reviewBooking =
+    pendingBookings.data?.find((booking) => booking.id === reviewBookingId) ??
+    linkedReviewBooking.data ??
+    null
   const upcomingPager = usePagination(
     data?.upcomingAppointments ?? [],
     5,
@@ -177,6 +209,11 @@ export function DashboardPage() {
           }
           hint="Awaiting review"
           href={ROUTES.bookings}
+          onOpen={() => {
+            if (firstPendingId) {
+              setReviewBookingId(firstPendingId)
+            }
+          }}
         />
         <SummaryCard
           label="Assigned patients"
@@ -208,7 +245,12 @@ export function DashboardPage() {
               ? `${nextAppointment.child.firstName} ${nextAppointment.child.lastName}`
               : 'Nothing scheduled'
           }
-          href={nextAppointment ? bookingReviewPath(nextAppointment.id) : ROUTES.bookings}
+          href={ROUTES.bookings}
+          onOpen={
+            nextAppointment
+              ? () => setReviewBookingId(nextAppointment.id)
+              : undefined
+          }
         />
       </section>
 
@@ -237,9 +279,11 @@ export function DashboardPage() {
               ) : data && data.upcomingAppointments.length > 0 ? (
                 <div className="divide-y divide-slate-200">
                   {upcomingPager.visibleItems.map((appointment) => (
-                    <Link
-                      className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
-                      to={bookingReviewPath(appointment.id)}
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                      aria-label={`Review appointment for ${appointment.child.firstName} ${appointment.child.lastName}`}
+                      onClick={() => setReviewBookingId(appointment.id)}
                       key={appointment.id}
                     >
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -255,7 +299,7 @@ export function DashboardPage() {
                         </p>
                       </div>
                       <BookingStatusBadge status={appointment.status} />
-                    </Link>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -350,13 +394,19 @@ export function DashboardPage() {
           <CardHeader
             title="Pending requests"
             action={
-              <Link
+              <button
+                type="button"
                 className={buttonStyles({ variant: 'ghost', size: 'sm' })}
-                to={ROUTES.bookings}
+                disabled={!firstPendingId}
+                onClick={() => {
+                  if (firstPendingId) {
+                    setReviewBookingId(firstPendingId)
+                  }
+                }}
               >
                 Review
                 <Icon name="arrow-right" size={12} />
-              </Link>
+              </button>
             }
           />
           <CardBody flush>
@@ -387,9 +437,11 @@ export function DashboardPage() {
                       key={booking.id}
                     >
                       <div className="flex items-center gap-2">
-                        <Link
-                          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                          to={bookingReviewPath(booking.id)}
+                        <button
+                          type="button"
+                          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                          aria-label={`Review request for ${childName}`}
+                          onClick={() => setReviewBookingId(booking.id)}
                         >
                           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
                             <Icon name="inbox" size={14} />
@@ -402,7 +454,7 @@ export function DashboardPage() {
                               {formatDateTime(booking.requestedAt)}
                             </span>
                           </span>
-                        </Link>
+                        </button>
                         <Badge tone="warning">Pending</Badge>
                         <div className="flex shrink-0 items-center gap-1">
                           <button
@@ -496,6 +548,17 @@ export function DashboardPage() {
           />
         </Card>
       </div>
+
+      <BookingReviewModal
+        open={Boolean(reviewBookingId)}
+        booking={reviewBooking}
+        isLoading={
+          Boolean(reviewBookingId) &&
+          linkedReviewBooking.isLoading &&
+          !reviewBooking
+        }
+        onClose={() => setReviewBookingId(null)}
+      />
     </div>
   )
 }

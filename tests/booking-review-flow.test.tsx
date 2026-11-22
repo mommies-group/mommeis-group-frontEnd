@@ -190,17 +190,20 @@ describe('dashboard booking quick actions', () => {
     jest.clearAllMocks()
   })
 
-  it('links a pending request straight to its booking review', () => {
+  it('opens a pending request in a review modal on the dashboard', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: /Ava Smith/ })).toHaveAttribute(
-      'href',
-      '/bookings?bookingId=booking-1',
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Review request for Ava Smith' }),
     )
+
+    expect(
+      screen.getByRole('dialog', { name: 'Booking review' }),
+    ).toBeInTheDocument()
   })
 
   it('approves a booking in one click', () => {

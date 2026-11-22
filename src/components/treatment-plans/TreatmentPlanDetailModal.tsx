@@ -30,8 +30,8 @@ type TreatmentPlanDetailModalProps = {
   onEdit: (plan: TreatmentPlan) => void
 }
 
-function isSessionActionable(status: string): boolean {
-  return !['COMPLETED', 'NO_SHOW', 'CANCELLED'].includes(status)
+function isSessionActionable(planStatus: string, sessionStatus: string): boolean {
+  return planStatus === 'ACTIVE' && sessionStatus === 'SCHEDULED'
 }
 
 export function TreatmentPlanDetailModal({
@@ -84,7 +84,13 @@ export function TreatmentPlanDetailModal({
     completeSession.isPending ||
     noShowSession.isPending ||
     cancelPlan.isPending
+  const canEditPlan =
+    plan.data?.status === 'DRAFT' ||
+    plan.data?.status === 'MODIFICATION_REQUESTED'
   const sessionList = sessions.data ?? []
+  const planSessionCount =
+    sessionList.length || plan.data?.sessions?.length || plan.data?.totalSessions || 0
+  const planFee = plan.data?.sessionFee ?? 0
 
   const handleSubmitPlan = () => {
     submitPlan.mutate(planId, {
@@ -217,7 +223,7 @@ export function TreatmentPlanDetailModal({
                 </div>
               ) : null}
 
-              {plan.data.status === 'DRAFT' ? (
+              {canEditPlan ? (
                 <div className="flex flex-wrap items-center justify-end gap-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
                   <Button
                     size="sm"
@@ -226,7 +232,7 @@ export function TreatmentPlanDetailModal({
                     onClick={() => onEdit(plan.data as TreatmentPlan)}
                   >
                     <Icon name="edit" size={13} />
-                    Edit draft
+                    {plan.data.status === 'DRAFT' ? 'Edit draft' : 'Edit plan'}
                   </Button>
                   <Button
                     size="sm"
@@ -314,12 +320,49 @@ export function TreatmentPlanDetailModal({
                         </p>
                         <p>
                           <span className="font-semibold text-slate-800">
+                            Sessions:
+                          </span>{' '}
+                          {invoice.data.sessionCount ?? planSessionCount}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">
+                            Session fee:
+                          </span>{' '}
+                          {invoice.data.sessionFee ?? planFee}{' '}
+                          {plan.data.currency ?? ''}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">
                             Total:
                           </span>{' '}
                           {invoice.data.totalAmount} {plan.data.currency ?? ''}
                         </p>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="grid gap-1 text-[11px] text-slate-600">
+                        <p>
+                          <span className="font-semibold text-slate-800">
+                            Sessions:
+                          </span>{' '}
+                          {planSessionCount}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">
+                            Session fee:
+                          </span>{' '}
+                          {planFee} {plan.data.currency ?? ''}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">
+                            Total:
+                          </span>{' '}
+                          {planSessionCount * planFee} {plan.data.currency ?? ''}
+                        </p>
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          Invoice not issued yet — showing plan summary.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : null}
 
@@ -366,7 +409,7 @@ export function TreatmentPlanDetailModal({
                           </p>
                         ) : null}
 
-                        {isSessionActionable(session.status) ? (
+                        {isSessionActionable(plan.data.status, session.status) ? (
                           <div className="mt-3 grid gap-2">
                             <Input
                               aria-label={`Note for session ${session.sessionNumber}`}

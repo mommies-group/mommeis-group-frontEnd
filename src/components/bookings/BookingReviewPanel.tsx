@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ClinicalNoteModal } from '../notes/ClinicalNoteModal'
 import { Icon } from '../icons/Icon'
 import { ApiErrorNotice } from '../ui/ApiErrorNotice'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { buttonStyles } from '../ui/buttonStyles'
 import { Card, CardBody, CardHeader } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
+import { Spinner } from '../ui/Spinner'
 import { Field, Input, Textarea } from '../ui/Field'
 import { useBookingById } from '../../hooks/queries/bookings/bookings.queries'
 import {
@@ -22,9 +21,14 @@ import { formatDateTime, toDateKey, toDateTimeIso } from '../../lib/format'
 import type { Booking, ProposalStatus } from '../../types/booking.types'
 import { BookingStatusBadge } from './bookingStatus'
 import { bookingStatusLabels } from './bookingStatusMeta'
-import { treatmentPlansCreatePath } from '../../router/routes'
 
 type Decision = 'approve' | 'reject' | 'propose'
+
+const TreatmentPlanFormModal = lazy(() =>
+  import('../treatment-plans/TreatmentPlanFormModal').then((module) => ({
+    default: module.TreatmentPlanFormModal,
+  })),
+)
 
 const proposalLabels: Record<ProposalStatus, string> = {
   PENDING: 'Awaiting parent',
@@ -56,6 +60,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   const [proposedTime, setProposedTime] = useState('')
   const [proposalNote, setProposalNote] = useState('')
   const [notesOpen, setNotesOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
 
   const current = bookingDetail.data ?? booking
   const [now, setNow] = useState(() => Date.now())
@@ -90,6 +95,17 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     proposeTime.isPending ||
     markNoShow.isPending
 
+  if (bookingDetail.isLoading && !bookingDetail.data) {
+    return (
+      <Card>
+        <CardHeader title="Review" />
+        <CardBody>
+          <Spinner className="py-10" label="Loading booking details…" />
+        </CardBody>
+      </Card>
+    )
+  }
+
   if (!current) {
     return (
       <Card>
@@ -120,6 +136,11 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     approveBooking.reset()
     rejectBooking.reset()
     proposeTime.reset()
+  }
+
+  const openPlan = () => {
+    setNotesOpen(false)
+    setPlanOpen(true)
   }
 
   const handleApprove = () => {
@@ -421,13 +442,10 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
             </Button>
           ) : null}
           {current.status === 'COMPLETED' ? (
-            <Link
-              className={buttonStyles({ variant: 'soft', size: 'sm' })}
-              to={treatmentPlansCreatePath(current.childId, current.id)}
-            >
+            <Button variant="soft" size="sm" onClick={openPlan}>
               <Icon name="file" size={13} />
               Create treatment plan
-            </Link>
+            </Button>
           ) : null}
         </div>
 
@@ -554,7 +572,20 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           onCompleted={() => {
             void bookingDetail.refetch()
           }}
+          onCreatePlan={openPlan}
         />
+      ) : null}
+
+      {planOpen ? (
+        <Suspense fallback={null}>
+          <TreatmentPlanFormModal
+            key={current.id}
+            open
+            childId={current.childId}
+            bookingId={current.id}
+            onClose={() => setPlanOpen(false)}
+          />
+        </Suspense>
       ) : null}
     </>
   )

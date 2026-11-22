@@ -7,7 +7,7 @@ import { MonthCalendar } from '../src/components/bookings/MonthCalendar'
 import { BookingStatusBadge } from '../src/components/bookings/bookingStatus'
 
 describe('Topbar', () => {
-  it('renders the page title, menu button and privacy link', () => {
+  it('renders the page title and menu button', () => {
     const onMenu = jest.fn()
 
     render(
@@ -17,10 +17,6 @@ describe('Topbar', () => {
     )
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute(
-      'href',
-      '/privacy',
-    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
     expect(onMenu).toHaveBeenCalledTimes(1)

@@ -1,4 +1,5 @@
 import { apiClient } from '../../lib/axios'
+import { ApiError } from '../../lib/api-error'
 import { unwrapApiData } from '../../lib/api-response'
 import type { ApiSuccessResponse } from '../../types/api.types'
 import type {
@@ -134,12 +135,23 @@ export async function noShowTreatmentSession(
 export async function getTreatmentPlanInvoice(
   planId: string,
   signal?: AbortSignal,
-): Promise<TreatmentPlanInvoice> {
-  const response = await apiClient.get<ApiSuccessResponse<TreatmentPlanInvoice>>(
-    `${basePath(planId)}/invoice`,
-    { signal },
-  )
-  return unwrapApiData(response)
+): Promise<TreatmentPlanInvoice | null> {
+  try {
+    const response = await apiClient.get<
+      ApiSuccessResponse<TreatmentPlanInvoice>
+    >(`${basePath(planId)}/invoice`, { signal })
+    return unwrapApiData(response)
+  } catch (error) {
+    // Draft / unapproved plans have no invoice yet. The fee is already shown
+    // on the plan, so treat a missing invoice as an empty result, not an error.
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.code === 'NOT_FOUND')
+    ) {
+      return null
+    }
+    throw error
+  }
 }
 
 export async function cancelTreatmentPlan(

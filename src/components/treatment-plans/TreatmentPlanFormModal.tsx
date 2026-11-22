@@ -155,6 +155,14 @@ function PlanFields({
       notifyError(null, 'Enter a plan title.')
       return
     }
+    if (!description.trim()) {
+      notifyError(null, 'Enter a plan description.')
+      return
+    }
+    if (!treatmentGoals.trim()) {
+      notifyError(null, 'Enter treatment goals.')
+      return
+    }
     if (sessions.length !== totalSessions) {
       notifyError(null, 'Add one session for every planned session.')
       return
@@ -178,6 +186,8 @@ function PlanFields({
           planId,
           payload: {
             title: title.trim(),
+            description: description.trim(),
+            treatmentGoals: treatmentGoals.trim(),
             totalSessions,
             sessionFee: effectiveSessionFee,
             sessions: sessionPayload,
@@ -252,10 +262,10 @@ function PlanFields({
           </Field>
         </div>
 
-        <Field label="Description" htmlFor="plan-description" optional>
+        <Field label="Description" htmlFor="plan-description">
           <Textarea
             id="plan-description"
-            disabled={isSaving || isEdit}
+            disabled={isSaving}
             rows={2}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -263,10 +273,10 @@ function PlanFields({
           />
         </Field>
 
-        <Field label="Treatment goals" htmlFor="plan-goals" optional>
+        <Field label="Treatment goals" htmlFor="plan-goals">
           <Textarea
             id="plan-goals"
-            disabled={isSaving || isEdit}
+            disabled={isSaving}
             rows={2}
             value={treatmentGoals}
             onChange={(event) => setTreatmentGoals(event.target.value)}

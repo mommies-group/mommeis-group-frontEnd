@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { Icon } from '../icons/Icon'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { buttonStyles } from '../ui/buttonStyles'
 import { EmptyState } from '../ui/EmptyState'
 import { Field, Input, Select, Textarea } from '../ui/Field'
 import { Pagination } from '../ui/Pagination'
@@ -19,7 +17,6 @@ import { usePatients } from '../../hooks/queries/patients/patients.queries'
 import { usePagination } from '../../hooks/use-pagination'
 import { formatDateTime } from '../../lib/format'
 import { notifyError, notifySuccess } from '../../lib/toast'
-import { treatmentPlansCreatePath } from '../../router/routes'
 
 type ClinicalNoteModalProps = {
   open: boolean
@@ -28,6 +25,7 @@ type ClinicalNoteModalProps = {
   completeBookingId?: string | null
   onClose: () => void
   onCompleted?: () => void
+  onCreatePlan?: () => void
 }
 
 export function ClinicalNoteModal({
@@ -37,6 +35,7 @@ export function ClinicalNoteModal({
   completeBookingId,
   onClose,
   onCompleted,
+  onCreatePlan,
 }: ClinicalNoteModalProps) {
   const patients = usePatients()
   const bookings = useBookings()
@@ -240,16 +239,14 @@ export function ClinicalNoteModal({
                   Booking completed. You can now create a treatment plan for
                   this child.
                 </p>
-                <Link
-                  className={buttonStyles({ variant: 'primary', size: 'sm' })}
-                  to={treatmentPlansCreatePath(
-                    completedPlanIntent.childId,
-                    completedPlanIntent.bookingId,
-                  )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onCreatePlan}
                 >
                   <Icon name="plus" size={13} />
                   Create treatment plan
-                </Link>
+                </Button>
               </div>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
