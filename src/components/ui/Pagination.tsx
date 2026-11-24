@@ -37,7 +37,7 @@ export function Pagination({
         flush ? '-mx-6 -mb-6 mt-auto px-6 py-3' : 'px-4 py-2.5',
       ].join(' ')}
     >
-      <p className="text-[10px] text-slate-500">
+      <p className="text-xs text-slate-500">
         Showing {rangeStart}–{rangeEnd} of {total}
       </p>
       {totalPages > 1 ? (

@@ -20,6 +20,15 @@ function useInvalidateTreatmentPlanViews() {
     void queryClient.invalidateQueries({
       queryKey: queryKeys.treatmentPlans.all,
     })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.bookings.all,
+    })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.calendar.all,
+    })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.dashboard.summary,
+    })
     if (planId) {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.treatmentPlans.detail(planId),

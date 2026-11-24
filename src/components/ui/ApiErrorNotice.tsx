@@ -28,8 +28,8 @@ export function ApiErrorNotice({
           <Icon name="alert" size={16} />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-semibold">{title}</p>
-          <p className="mt-0.5 text-[11px] leading-4 text-rose-900">
+          <p className="text-sm font-semibold">{title}</p>
+          <p className="mt-0.5 text-xs leading-5 text-rose-900">
             {getApiErrorMessage(error)}
           </p>
         </div>

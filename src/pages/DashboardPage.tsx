@@ -49,7 +49,7 @@ function SummaryCard({
   const content = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[11px] font-semibold text-slate-500">
+        <p className="truncate text-xs font-semibold text-slate-500">
           {label}
         </p>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -59,7 +59,7 @@ function SummaryCard({
       <span className="mt-2 min-w-0 truncate text-2xl font-bold tracking-tight text-slate-900">
         {value}
       </span>
-      <p className="mt-0.5 truncate text-[10px] text-slate-500">{hint}</p>
+      <p className="mt-0.5 truncate text-[12px] text-slate-500">{hint}</p>
     </>
   )
 
@@ -294,7 +294,7 @@ export function DashboardPage() {
                           {appointment.child.firstName}{' '}
                           {appointment.child.lastName}
                         </p>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                        <p className="mt-0.5 truncate text-xs text-slate-500">
                           {formatScheduledDateTime(appointment.scheduledAt)}
                         </p>
                       </div>
@@ -361,7 +361,7 @@ export function DashboardPage() {
                         <p className="truncate text-xs font-medium text-slate-800">
                           {activity.title}
                         </p>
-                        <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                        <p className="mt-0.5 truncate text-[12px] text-slate-500">
                           {activity.type === 'NOTE'
                             ? 'Clinical note'
                             : 'Activity'}{' '}
@@ -450,7 +450,7 @@ export function DashboardPage() {
                             <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-teal-800">
                               {childName}
                             </span>
-                            <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                            <span className="mt-0.5 block truncate text-[12px] text-slate-500">
                               {formatDateTime(booking.requestedAt)}
                             </span>
                           </span>
@@ -496,7 +496,7 @@ export function DashboardPage() {
                         <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50/60 p-1.5">
                           <Input
                             aria-label={`Rejection reason for ${childName}`}
-                            className="h-7 flex-1 px-2 text-[11px]"
+                            className="h-7 flex-1 px-2 text-xs"
                             placeholder="Reason for rejection"
                             value={rejectReason}
                             disabled={rejectBooking.isPending}

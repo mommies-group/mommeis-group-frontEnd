@@ -10,7 +10,6 @@ export function useClinicalNotes(childId: string | null) {
     queryKey: queryKeys.patients.notes(childId ?? ''),
     queryFn: ({ signal }) => getClinicalNotes(childId as string, signal),
     enabled: Boolean(childId),
-    staleTime: 15_000,
   })
 }
 
@@ -20,6 +19,5 @@ export function useClinicalNote(noteId: string | null) {
     queryFn: ({ signal }) =>
       getClinicalNote(noteId as string, true, signal),
     enabled: Boolean(noteId),
-    staleTime: 15_000,
   })
 }

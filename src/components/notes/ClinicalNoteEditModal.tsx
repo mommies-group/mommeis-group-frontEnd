@@ -221,7 +221,6 @@ export function ClinicalNoteEditModal({
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
-        onClick={confirmingDelete ? undefined : onClose}
       />
       <div
         aria-labelledby="clinical-note-edit-title"
@@ -231,7 +230,7 @@ export function ClinicalNoteEditModal({
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-3.5">
           <h2
-            className="truncate text-sm font-semibold text-slate-900"
+            className="truncate text-base font-semibold text-slate-900"
             id="clinical-note-edit-title"
           >
             {confirmingDelete ? 'Delete clinical note' : 'Edit clinical note'}
@@ -266,7 +265,7 @@ export function ClinicalNoteEditModal({
               <p className="text-sm text-slate-700">
                 Delete this note? This will hide it from the child’s record.
               </p>
-              <p className="mt-2 line-clamp-3 rounded-lg bg-slate-50 p-3 text-[11px] leading-5 text-slate-600">
+              <p className="mt-2 line-clamp-3 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
                 {note.data.content}
               </p>
               <div className="mt-5 flex justify-end gap-2">
@@ -318,7 +317,7 @@ export function ClinicalNoteEditModal({
                 </div>
 
                 <div className="rounded-xl border border-slate-300 bg-slate-50/60 p-3">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Activities
                   </p>
                   <div className="space-y-2">
@@ -339,10 +338,10 @@ export function ClinicalNoteEditModal({
                               type="checkbox"
                             />
                             <span className="min-w-0">
-                              <span className="block truncate text-[11px] font-semibold text-slate-900">
+                              <span className="block truncate text-xs font-semibold text-slate-900">
                                 {activity.title}
                               </span>
-                              <span className="block text-[10px] text-slate-500">
+                              <span className="block text-[12px] text-slate-500">
                                 {activity.durationMinutes} min
                               </span>
                             </span>
@@ -353,7 +352,7 @@ export function ClinicalNoteEditModal({
                           {selected ? (
                             <Input
                               aria-label={`Note for ${activity.title}`}
-                              className="mt-2 h-8 text-[11px]"
+                              className="mt-2 h-8 text-xs"
                               disabled={isSaving}
                               onChange={(event) =>
                                 setSpecialistNotes((current) => ({

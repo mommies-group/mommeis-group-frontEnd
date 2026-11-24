@@ -8,6 +8,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Pagination } from "../ui/Pagination";
 import { Spinner } from "../ui/Spinner";
 import { TreatmentPlanDetailModal } from "./TreatmentPlanDetailModal";
+import { TreatmentPlanFormModal } from "./TreatmentPlanFormModal";
 import { StatusBadge } from "./treatment-plan-status";
 import { useTreatmentPlans } from "../../hooks/queries/treatment-plans/treatment-plans.queries";
 import { formatDateTime } from "../../lib/format";
@@ -28,6 +29,7 @@ export function PatientTreatmentModal({
 }: PatientTreatmentModalProps) {
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const plans = useTreatmentPlans(open ? page : 1, PAGE_SIZE, { childId });
 
   useEffect(() => {
@@ -36,14 +38,14 @@ export function PatientTreatmentModal({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !detailId) {
+      if (event.key === "Escape" && !detailId && !editingPlanId) {
         onClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, detailId, onClose]);
+  }, [open, detailId, editingPlanId, onClose]);
 
   if (!open) {
     return null;
@@ -66,7 +68,6 @@ export function PatientTreatmentModal({
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-          onClick={onClose}
         />
         <div
           aria-labelledby="patient-treatment-title"
@@ -77,12 +78,12 @@ export function PatientTreatmentModal({
           <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-3.5">
             <div className="min-w-0">
               <h2
-                className="truncate text-sm font-semibold text-slate-900"
+                className="truncate text-base font-semibold text-slate-900"
                 id="patient-treatment-title"
               >
                 Treatment plans
               </h2>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-xs text-slate-500">
                 Plans created for this patient.
               </p>
             </div>
@@ -122,7 +123,7 @@ export function PatientTreatmentModal({
                           </p>
                           <StatusBadge status={plan.status} />
                         </div>
-                        <p className="mt-1 text-[10px] text-slate-500">
+                        <p className="mt-1 text-[12px] text-slate-500">
                           {plan.totalSessions} sessions ·{" "}
                           {formatDateTime(plan.createdAt)}
                         </p>
@@ -178,7 +179,23 @@ export function PatientTreatmentModal({
           open
           planId={detailId}
           onClose={() => setDetailId(null)}
-          onEdit={() => setDetailId(null)}
+          onEdit={(plan) => {
+            setDetailId(null);
+            setEditingPlanId(plan.id);
+          }}
+        />
+      ) : null}
+
+      {editingPlanId ? (
+        <TreatmentPlanFormModal
+          key={editingPlanId}
+          open
+          planId={editingPlanId}
+          childId={childId}
+          onClose={() => setEditingPlanId(null)}
+          onSaved={() => {
+            void plans.refetch();
+          }}
         />
       ) : null}
     </>

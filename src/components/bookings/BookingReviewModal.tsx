@@ -40,11 +40,9 @@ export function BookingReviewModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Dismiss booking review"
-        className="absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-[2px]"
-        onClick={onClose}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
       />
       <div
         role="dialog"
@@ -53,7 +51,7 @@ export function BookingReviewModal({
         className="relative z-10 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-slate-300 bg-white shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-900">{label}</h2>
+          <h2 className="text-base font-semibold text-slate-900">{label}</h2>
           <button
             type="button"
             aria-label="Close booking review"

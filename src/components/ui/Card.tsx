@@ -34,7 +34,7 @@ export function CardHeader({
     <div className="flex flex-col gap-3 border-b border-slate-300 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h2
-          className="text-sm font-semibold tracking-tight text-slate-900"
+          className="text-base font-semibold tracking-tight text-slate-900"
           id={id}
         >
           {title}

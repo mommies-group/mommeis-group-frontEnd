@@ -228,7 +228,7 @@ export function ProfilePage() {
                         ))}
                       </div>
                     ) : null}
-                    <p className="mt-1 max-w-full truncate text-[11px] text-slate-500">
+                    <p className="mt-1 max-w-full truncate text-xs text-slate-500">
                       {profile.data.email}
                     </p>
                     {profile.data.verificationStatus ? (
@@ -264,7 +264,7 @@ export function ProfilePage() {
                       <Icon name="shield" size={14} />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         License
                       </p>
                       <p className="mt-0.5 truncate text-xs text-slate-700">
@@ -283,7 +283,7 @@ export function ProfilePage() {
                       <Icon name="briefcase" size={14} />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Experience
                       </p>
                       <p className="mt-0.5 text-xs text-slate-700">

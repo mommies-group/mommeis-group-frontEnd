@@ -54,7 +54,7 @@ export function Logo({
         </span>
         {tagline ? (
           <span
-            className={`truncate text-[10px] font-semibold uppercase tracking-[0.14em] ${
+            className={`truncate text-[11px] font-semibold uppercase tracking-[0.14em] ${
               light ? 'text-teal-100/80' : 'text-slate-500'
             }`}
           >

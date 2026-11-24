@@ -163,6 +163,20 @@ export function toDateTimeIso(date: string, time: string): string | null {
   return Number.isNaN(value.getTime()) ? null : value.toISOString()
 }
 
+export function toScheduledIso(date: string, time: string): string | null {
+  if (!date || !time) {
+    return null
+  }
+
+  const normalizedTime = time.length === 5 ? `${time}:00` : time
+  const parsed = parseScheduledDate(`${date}T${normalizedTime}`)
+  if (!parsed) {
+    return null
+  }
+
+  return `${date}T${normalizedTime}.000Z`
+}
+
 export function toDueDateIso(date: string): string | null {
   if (!date) {
     return null

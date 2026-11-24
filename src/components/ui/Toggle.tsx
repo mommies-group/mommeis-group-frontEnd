@@ -32,7 +32,7 @@ export function Toggle({
         </span>
         {description ? (
           <p
-            className="mt-1 text-[11px] leading-4 text-slate-500"
+            className="mt-1 text-xs leading-5 text-slate-500"
             id={descriptionId}
           >
             {description}

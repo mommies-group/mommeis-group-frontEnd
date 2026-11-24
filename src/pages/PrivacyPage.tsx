@@ -53,7 +53,7 @@ export function PrivacyPage() {
                 <p className="text-xs font-semibold text-slate-800">
                   Authorised specialists
                 </p>
-                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
                   Clinical information is limited to the signed-in specialist.
                 </p>
               </div>
@@ -66,7 +66,7 @@ export function PrivacyPage() {
                 <p className="text-xs font-semibold text-slate-800">
                   Access windows
                 </p>
-                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
                   Revoked consent removes record access immediately.
                 </p>
               </div>
@@ -79,7 +79,7 @@ export function PrivacyPage() {
                 <p className="text-xs font-semibold text-slate-800">
                   Not emergency care
                 </p>
-                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
                   MindBloom is not a substitute for emergency services.
                 </p>
               </div>

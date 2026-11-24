@@ -49,7 +49,7 @@ function RecordSection({
       className={`flex h-full min-h-0 flex-col ${wide ? 'xl:col-span-2' : ''}`}
     >
       <div className="flex flex-col gap-2 border-b border-slate-300 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-900">
+        <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold text-slate-900">
           <span className="text-teal-700">
             <Icon name={icon} size={15} />
           </span>
@@ -215,34 +215,34 @@ export function PatientRecordPage() {
           >
             <dl className="grid gap-3 sm:grid-cols-4">
               <div>
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Name
                 </dt>
-                <dd className="mt-0.5 text-xs font-semibold text-slate-900">
+                <dd className="mt-0.5 text-sm font-semibold text-slate-900">
                   {record.data.child.firstName} {record.data.child.lastName}
                 </dd>
               </div>
               <div>
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Born
                 </dt>
-                <dd className="mt-0.5 text-xs font-medium text-slate-700">
+                <dd className="mt-0.5 text-sm font-medium text-slate-700">
                   {formatBirthDate(record.data.child.dateOfBirth)}
                 </dd>
               </div>
               <div>
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Parent
                 </dt>
-                <dd className="mt-0.5 text-xs font-medium text-slate-700">
+                <dd className="mt-0.5 text-sm font-medium text-slate-700">
                   {record.data.parent.fullName}
                 </dd>
               </div>
               <div>
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Email
                 </dt>
-                <dd className="mt-0.5 truncate text-xs font-medium text-slate-700">
+                <dd className="mt-0.5 truncate text-sm font-medium text-slate-700">
                   {record.data.parent.email ?? '—'}
                 </dd>
               </div>
@@ -261,10 +261,10 @@ export function PatientRecordPage() {
                       className="absolute -left-[22px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-teal-600"
                       aria-hidden="true"
                     />
-                    <p className="text-xs font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-slate-900">
                       {milestone.title}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-500">
+                    <p className="mt-0.5 text-xs text-slate-500">
                       {formatDate(milestone.achievedAt)}
                       {milestone.description
                         ? ` · ${milestone.description}`
@@ -297,10 +297,10 @@ export function PatientRecordPage() {
               <div className="divide-y divide-slate-200">
                 {observationsPager.visibleItems.map((observation) => (
                   <div className="py-2.5 first:pt-0 last:pb-0" key={observation.id}>
-                    <p className="whitespace-pre-wrap text-[11px] leading-5 text-slate-700">
+                    <p className="whitespace-pre-wrap text-[14px] leading-6 text-slate-800">
                       {observation.content}
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-500">
+                    <p className="mt-1 text-[12px] text-slate-500">
                       {formatDateTime(observation.observedAt)}
                     </p>
                   </div>
@@ -331,13 +331,13 @@ export function PatientRecordPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr>
-                      <th className="border-b border-slate-300 pb-2 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="border-b border-slate-300 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Assessment
                       </th>
-                      <th className="border-b border-slate-300 pb-2 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="border-b border-slate-300 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Score
                       </th>
-                      <th className="border-b border-slate-300 pb-2 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="border-b border-slate-300 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Date
                       </th>
                     </tr>
@@ -345,13 +345,13 @@ export function PatientRecordPage() {
                   <tbody className="divide-y divide-slate-200">
                     {assessmentsPager.visibleItems.map((assessment) => (
                       <tr key={assessment.id}>
-                        <td className="py-2 text-xs font-medium text-slate-800">
+                        <td className="py-2 text-sm font-medium text-slate-800">
                           {assessment.gameName}
                         </td>
                         <td className="py-2 text-xs text-slate-600">
                           {assessment.score} / {assessment.maxScore}
                         </td>
-                        <td className="py-2 text-[10px] text-slate-500">
+                        <td className="py-2 text-[12px] text-slate-500">
                           {formatDate(assessment.playedAt)}
                         </td>
                       </tr>
@@ -388,11 +388,11 @@ export function PatientRecordPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <RiskBadge level={triage.riskLevel} />
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[12px] text-slate-500">
                         {formatDateTime(triage.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[11px] leading-5 text-slate-700">
+                    <p className="mt-1.5 text-[14px] leading-6 text-slate-800">
                       {triage.summary}
                     </p>
                   </div>
@@ -436,32 +436,32 @@ export function PatientRecordPage() {
               <div className="space-y-4">
                 {notesPager.visibleItems.map((note) => (
                   <article
-                    className="rounded-xl border border-slate-200 bg-white p-5"
+                    className="rounded-xl border border-slate-200 bg-white p-5 mb-4"
                     key={note.id}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-4">
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                             Notes
                           </p>
-                          <p className="mt-1 whitespace-pre-wrap text-[11px] leading-5 text-slate-700">
+                          <p className="mt-1 whitespace-pre-wrap text-[14px] leading-6 text-slate-800">
                             {note.content}
                           </p>
                         </div>
                         {note.recommendation ? (
                           <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                               Instructions
                             </p>
-                            <p className="mt-1 rounded-md bg-teal-50 px-2.5 py-1.5 text-[10px] leading-4 text-teal-900">
+                            <p className="mt-1 rounded-md bg-teal-50 px-2.5 py-1.5 text-xs leading-5 text-teal-900">
                               {note.recommendation}
                             </p>
                           </div>
                         ) : null}
                         {note.activities && note.activities.length > 0 ? (
                           <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                               Activities
                             </p>
                             {note.activities.map((activity, index) => (
@@ -469,23 +469,23 @@ export function PatientRecordPage() {
                                 className="rounded-md border border-slate-200 bg-white p-3"
                                 key={`${activity.activityId}-${index}`}
                               >
-                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                   Activity
                                 </p>
-                                <p className="mt-0.5 text-[11px] font-medium text-slate-800">
+                                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                                   {activity.title ?? 'Activity'}
                                   {activity.durationMinutes ? (
-                                    <span className="ml-2 text-[10px] font-normal text-slate-500">
+                                    <span className="ml-2 text-[12px] font-normal text-slate-500">
                                       {activity.durationMinutes} min
                                     </span>
                                   ) : null}
                                 </p>
                                 {activity.specialistNotes ? (
                                   <div className="mt-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                       Your note
                                     </p>
-                                    <p className="mt-0.5 whitespace-pre-wrap text-[10px] leading-4 text-slate-600">
+                                    <p className="mt-0.5 whitespace-pre-wrap text-xs leading-5 text-slate-600">
                                       {activity.specialistNotes}
                                     </p>
                                   </div>
@@ -520,7 +520,7 @@ export function PatientRecordPage() {
                         </button>
                       </div>
                     </div>
-                    <p className="mt-4 border-t border-slate-100 pt-3 text-[10px] text-slate-500">
+                    <p className="mt-4 border-t border-slate-100 pt-3 text-[12px] text-slate-500">
                       {formatDateTime(note.createdAt)}
                     </p>
                   </article>

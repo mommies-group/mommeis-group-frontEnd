@@ -11,6 +11,7 @@ export function useBookings(status?: BookingStatus) {
   return useQuery({
     queryKey: queryKeys.bookings.list(status),
     queryFn: ({ signal }) => getBookings({ status, signal }),
+    refetchInterval: 5_000,
   })
 }
 
@@ -18,6 +19,7 @@ export function usePendingBookings() {
   return useQuery({
     queryKey: queryKeys.bookings.list('PENDING'),
     queryFn: ({ signal }) => getPendingBookings(signal),
+    refetchInterval: 5_000,
   })
 }
 
@@ -26,5 +28,6 @@ export function useBookingById(id: string | null) {
     queryKey: queryKeys.bookings.detail(id ?? ''),
     queryFn: ({ signal }) => getBookingById(id as string, signal),
     enabled: Boolean(id),
+    refetchInterval: 5_000,
   })
 }

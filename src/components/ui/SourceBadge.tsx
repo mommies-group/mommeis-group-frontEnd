@@ -21,7 +21,7 @@ type SourceBadgeProps = {
 export function SourceBadge({ source }: SourceBadgeProps) {
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold ${toneClasses[source]}`}
+      className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold ${toneClasses[source]}`}
     >
       <Icon name={source === 'specialist' ? 'notes' : 'lock'} size={11} />
       {labels[source]}

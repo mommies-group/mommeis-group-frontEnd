@@ -10,7 +10,7 @@ export function usePatients() {
   return useQuery({
     queryKey: queryKeys.patients.list,
     queryFn: ({ signal }) => getPatients(signal),
-    staleTime: 60_000,
+    refetchInterval: 10_000,
   })
 }
 

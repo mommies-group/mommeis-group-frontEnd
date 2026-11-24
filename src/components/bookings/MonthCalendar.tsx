@@ -97,7 +97,7 @@ export function MonthCalendar({
           {monthOffset !== 0 ? (
             <button
               type="button"
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
               onClick={() => onMonthOffsetChange(0)}
             >
               Today
@@ -125,7 +125,7 @@ export function MonthCalendar({
       <div className="mb-1.5 mt-4 grid grid-cols-7 gap-1" aria-hidden="true">
         {WEEKDAYS.map((day) => (
           <span
-            className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+            className="py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500"
             key={day}
           >
             {day}
@@ -221,7 +221,7 @@ export function MonthCalendar({
       </div>
 
       <div
-        className="mt-4 flex flex-wrap items-center gap-3 text-[10px] font-medium text-slate-500"
+        className="mt-4 flex flex-wrap items-center gap-3 text-[12px] font-medium text-slate-500"
         aria-label="Session status colour key"
       >
         <span className="inline-flex items-center gap-1.5">

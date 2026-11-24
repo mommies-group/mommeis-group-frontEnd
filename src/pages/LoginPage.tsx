@@ -55,7 +55,7 @@ export function LoginPage() {
           <Logo light />
 
           <div className="mt-12 max-w-md">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-50">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-teal-50">
               <Icon name="shield" size={12} />
               Specialist workspace
             </span>
@@ -67,7 +67,7 @@ export function LoginPage() {
               workspace.
             </p>
 
-            <div className="mt-6 grid gap-2 text-[11px] text-teal-50/90">
+            <div className="mt-6 grid gap-2 text-xs text-teal-50/90">
               <span className="inline-flex items-center gap-2">
                 <Icon name="check" size={13} />
                 Consent-aware clinical access
@@ -79,7 +79,7 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/10 pt-5 text-[9px] font-medium uppercase tracking-[0.12em] text-teal-100/80">
+          <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/10 pt-5 text-[11px] font-medium uppercase tracking-[0.12em] text-teal-100/80">
             <span>MindBloom Specialist Portal</span>
             <span>Secure access</span>
           </div>
@@ -95,7 +95,7 @@ export function LoginPage() {
             <Logo />
           </div>
 
-          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-teal-700">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-teal-700">
             <Icon name="user" size={12} />
             Specialist access
           </p>
@@ -191,7 +191,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-[10px] leading-4 text-slate-500">
+          <p className="mt-4 text-[12px] leading-5 text-slate-500">
             Authorised specialists only. Not a substitute for emergency care.
           </p>
         </div>

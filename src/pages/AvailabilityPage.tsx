@@ -99,7 +99,7 @@ function DaySlotsRow({
   return (
     <div className="grid gap-2 px-4 py-3 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-start">
       <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[11px] font-bold text-slate-600">
           {item.short}
         </span>
         <span className="text-xs font-semibold text-slate-800">
@@ -125,14 +125,14 @@ function DaySlotsRow({
                   }`}
                   key={slot.id}
                 >
-                  <span className="text-[11px] font-semibold text-slate-700">
+                  <span className="text-xs font-semibold text-slate-700">
                     {formatRange(slot.startTime, slot.endTime)}
                   </span>
                   <Select
                     aria-label={`Status for ${item.label} ${formatRange(slot.startTime, slot.endTime)}`}
                     value={currentStatus}
                     disabled={isBusy}
-                    className="h-7 w-24 text-[11px]"
+                    className="h-7 w-28 text-xs"
                     onChange={(event) =>
                       onStatusChange(
                         slot,
@@ -184,7 +184,7 @@ function DaySlotsRow({
               )
             })
           ) : (
-            <span className="text-[11px] text-slate-500">No slots</span>
+            <span className="text-xs text-slate-500">No slots</span>
           )}
         </div>
       </div>
@@ -379,7 +379,7 @@ export function AvailabilityPage() {
           <CardHeader
             title="Weekly availability"
             action={
-              <div className="flex items-center gap-3 text-[10px] font-medium text-slate-500">
+              <div className="flex items-center gap-3 text-[12px] font-medium text-slate-500">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm bg-teal-600" />
                   Active
@@ -433,7 +433,7 @@ export function AvailabilityPage() {
             <CardBody>
               <div className="grid gap-4">
                 {editingSlot ? (
-                  <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-3 py-2 text-[11px] text-teal-900">
+                  <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-3 py-2 text-xs text-teal-900">
                     Editing {formatRange(editingSlot.startTime, editingSlot.endTime)}
                   </div>
                 ) : null}
@@ -480,15 +480,15 @@ export function AvailabilityPage() {
                   </Field>
                 </div>
                 {activeStart && activeEnd ? (
-                  <p className="-mt-2 text-[11px] font-medium text-slate-500">
+                  <p className="-mt-2 text-xs font-medium text-slate-500">
                     Selected: {formatRange(activeStart, activeEnd)} (30 min)
                   </p>
                 ) : activeStart ? (
-                  <p className="-mt-2 text-[11px] font-medium text-rose-600">
+                  <p className="-mt-2 text-xs font-medium text-rose-600">
                     Start time must be 11:29 PM or earlier for a 30-minute slot.
                   </p>
                 ) : (
-                  <p className="-mt-2 text-[11px] font-medium text-slate-500">
+                  <p className="-mt-2 text-xs font-medium text-slate-500">
                     End time is set automatically (+30 min).
                   </p>
                 )}

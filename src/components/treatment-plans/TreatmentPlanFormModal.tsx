@@ -13,7 +13,7 @@ import {
   useUpdateTreatmentPlan,
 } from '../../hooks/mutations/treatment-plans/treatment-plans.mutations'
 import { notifyError, notifySuccess } from '../../lib/toast'
-import { toDateKey, toDateTimeIso } from '../../lib/format'
+import { parseScheduledDate, toDateKey, toScheduledIso } from '../../lib/format'
 import type { TreatmentPlan } from '../../types/treatment-plan.types'
 
 type SessionDraft = {
@@ -54,12 +54,13 @@ function initialSessions(plan: TreatmentPlan | null | undefined): SessionDraft[]
   const sessions = plan?.sessions ?? []
   if (sessions.length) {
     return sessions.map((session, index) => {
-      const scheduledAt = new Date(session.scheduledAt)
+      const scheduledAt =
+        parseScheduledDate(session.scheduledAt) ?? new Date(session.scheduledAt)
       return {
         sessionNumber: session.sessionNumber ?? index + 1,
         date: toDateKey(scheduledAt),
         time: `${pad(scheduledAt.getHours())}:${pad(scheduledAt.getMinutes())}`,
-        durationMinutes: session.durationMinutes,
+        durationMinutes: 30,
         notes: session.notes ?? '',
       }
     })
@@ -105,7 +106,7 @@ function PlanFields({
   const [totalSessions, setTotalSessions] = useState(
     plan?.totalSessions ?? 2,
   )
-  // null means "use my specialist consultation fee"; the effective value is
+  // null means "use my specialist session fee"; the effective value is
   // derived every render so pricing data that loads later shows immediately.
   const [sessionFee, setSessionFee] = useState<number | null>(
     plan?.sessionFee ?? null,
@@ -119,9 +120,10 @@ function PlanFields({
   const isSaving = createPlan.isPending || updatePlan.isPending
   const patientOptions = patients.data ?? []
   const resolvedChildId = selectedChildId || childId || ''
-  const effectiveSessionFee =
-    sessionFee ?? pricing.data?.consultationFee ?? pricing.data?.sessionFee ?? 0
-  const planTotal = sessions.length * effectiveSessionFee
+  const effectiveSessionFee = sessionFee ?? pricing.data?.sessionFee ?? 0
+  const subtotal = sessions.length * effectiveSessionFee
+  const normalizedDiscount = Math.max(0, Number.isFinite(discount) ? discount : 0)
+  const planTotal = Math.max(0, subtotal - normalizedDiscount)
 
   const updateSession = (index: number, patch: Partial<SessionDraft>) => {
     setSessions((current) =>
@@ -168,10 +170,19 @@ function PlanFields({
       return
     }
 
+    if (!Number.isFinite(discount) || discount < 0) {
+      notifyError(null, 'Discount cannot be negative.')
+      return
+    }
+    if (discount > 0 && discount >= subtotal) {
+      notifyError(null, 'Discount must be less than the plan subtotal.')
+      return
+    }
+
     const sessionPayload = sessions.map((session, index) => ({
       sessionNumber: index + 1,
-      scheduledAt: toDateTimeIso(session.date, session.time) ?? '',
-      durationMinutes: Number(session.durationMinutes),
+      scheduledAt: toScheduledIso(session.date, session.time) ?? '',
+      durationMinutes: 30,
       notes: session.notes.trim() || undefined,
     }))
 
@@ -190,6 +201,7 @@ function PlanFields({
             treatmentGoals: treatmentGoals.trim(),
             totalSessions,
             sessionFee: effectiveSessionFee,
+            discount: normalizedDiscount,
             sessions: sessionPayload,
           },
         },
@@ -212,10 +224,10 @@ function PlanFields({
         description: description.trim() || undefined,
         treatmentGoals: treatmentGoals.trim() || undefined,
         totalSessions,
-        sessionDurationMinutes: Number(sessions[0]?.durationMinutes ?? 30),
+        sessionDurationMinutes: 30,
         sessionFee: effectiveSessionFee,
         currency,
-        discount: Number(discount),
+        discount: normalizedDiscount,
         sessions: sessionPayload,
         consultationBookingId: bookingId || undefined,
       },
@@ -286,18 +298,18 @@ function PlanFields({
 
         <div className="grid grid-cols-3 gap-2">
           <Field
-            label={<span className="whitespace-nowrap">Consult fee</span>}
-            htmlFor="plan-consultation-fee"
+            label={<span className="whitespace-nowrap">Session fee</span>}
+            htmlFor="plan-session-fee"
           >
             <Input
-              id="plan-consultation-fee"
+              id="plan-session-fee"
               min={0}
               step={10}
               type="number"
               disabled={isSaving}
               value={effectiveSessionFee}
               onChange={(event) => setSessionFee(Number(event.target.value))}
-              aria-label="Consultation fee"
+              aria-label="Session fee"
             />
           </Field>
           <Field label="Sessions" htmlFor="plan-total-sessions">
@@ -318,25 +330,24 @@ function PlanFields({
           </Field>
         </div>
 
-        {!isEdit ? (
-          <Field label="Discount" htmlFor="plan-discount" optional>
-            <Input
-              id="plan-discount"
-              min={0}
-              type="number"
-              disabled={isSaving}
-              value={discount}
-              onChange={(event) => setDiscount(Number(event.target.value))}
-            />
-          </Field>
-        ) : null}
+        <Field label="Discount" htmlFor="plan-discount" optional>
+          <Input
+            id="plan-discount"
+            min={0}
+            max={Math.max(0, subtotal - 1)}
+            type="number"
+            disabled={isSaving}
+            value={discount}
+            onChange={(event) => setDiscount(Number(event.target.value))}
+          />
+        </Field>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-slate-900">
               Session schedule
             </p>
-            <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+            <span className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[12px] font-semibold text-slate-600">
               {sessions.length} scheduled
             </span>
           </div>
@@ -346,7 +357,7 @@ function PlanFields({
                 className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[auto_1fr_1fr_100px]"
                 key={session.sessionNumber}
               >
-                <span className="flex items-center text-[11px] font-semibold text-slate-500">
+                <span className="flex items-center text-xs font-semibold text-slate-500">
                   #{session.sessionNumber}
                 </span>
                 <Field label="Date" htmlFor={`plan-session-date-${index}`}>
@@ -375,16 +386,10 @@ function PlanFields({
                 <Field label="Minutes" htmlFor={`plan-session-minutes-${index}`}>
                   <Input
                     id={`plan-session-minutes-${index}`}
-                    min={5}
-                    step={5}
                     type="number"
-                    disabled={isSaving}
-                    value={session.durationMinutes}
-                    onChange={(event) =>
-                      updateSession(index, {
-                        durationMinutes: Number(event.target.value),
-                      })
-                    }
+                    disabled
+                    readOnly
+                    value={30}
                   />
                 </Field>
                 <Field
@@ -422,11 +427,15 @@ function PlanFields({
         <div className="flex flex-wrap items-center justify-end gap-2">
           <span
             aria-live="polite"
-            className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-900"
+            className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-900"
           >
             Total: {currency} {planTotal.toLocaleString()}
             <span className="ml-1 font-normal text-teal-700">
-              ({sessions.length} × {effectiveSessionFee.toLocaleString()})
+              ({sessions.length} × {effectiveSessionFee.toLocaleString()}
+              {normalizedDiscount > 0
+                ? ` − ${normalizedDiscount.toLocaleString()}`
+                : ''}
+              )
             </span>
           </span>
           <Button
@@ -485,7 +494,6 @@ export function TreatmentPlanFormModal({
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-        onClick={onClose}
       />
       <div
         aria-labelledby="treatment-plan-form-title"
@@ -496,12 +504,12 @@ export function TreatmentPlanFormModal({
         <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-3.5">
           <div className="min-w-0">
             <h2
-              className="truncate text-sm font-semibold text-slate-900"
+              className="truncate text-base font-semibold text-slate-900"
               id="treatment-plan-form-title"
             >
               {isEdit ? 'Edit treatment plan' : 'Create treatment plan'}
             </h2>
-            <p className="mt-0.5 text-[11px] text-slate-500">
+            <p className="mt-0.5 text-xs text-slate-500">
               Define the plan and schedule every session.
             </p>
           </div>

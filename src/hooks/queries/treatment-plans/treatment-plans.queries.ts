@@ -21,7 +21,7 @@ export function useTreatmentPlans(
       filters.childId ?? 'all',
     ] as const,
     queryFn: ({ signal }) => getTreatmentPlans(page, limit, filters, signal),
-    staleTime: 15_000,
+    refetchInterval: 5_000,
   })
 }
 
@@ -30,7 +30,7 @@ export function useTreatmentPlan(planId: string | null) {
     queryKey: queryKeys.treatmentPlans.detail(planId ?? ''),
     queryFn: ({ signal }) => getTreatmentPlan(planId as string, signal),
     enabled: Boolean(planId),
-    staleTime: 15_000,
+    refetchInterval: 5_000,
   })
 }
 
@@ -39,7 +39,7 @@ export function useTreatmentPlanSessions(planId: string | null) {
     queryKey: queryKeys.treatmentPlans.sessions(planId ?? ''),
     queryFn: ({ signal }) => getTreatmentPlanSessions(planId as string, signal),
     enabled: Boolean(planId),
-    staleTime: 15_000,
+    refetchInterval: 5_000,
   })
 }
 
@@ -52,7 +52,6 @@ export function useTreatmentPlanSession(
     queryFn: ({ signal }) =>
       getTreatmentPlanSession(planId as string, sessionId as string, signal),
     enabled: Boolean(planId && sessionId),
-    staleTime: 15_000,
   })
 }
 
@@ -61,6 +60,5 @@ export function useTreatmentPlanInvoice(planId: string | null) {
     queryKey: queryKeys.treatmentPlans.invoice(planId ?? ''),
     queryFn: ({ signal }) => getTreatmentPlanInvoice(planId as string, signal),
     enabled: Boolean(planId),
-    staleTime: 30_000,
   })
 }

@@ -34,14 +34,14 @@ export function Field({
       >
         {label}
         {optional ? (
-          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             Optional
           </span>
         ) : null}
       </label>
       {children}
       {hint ? (
-        <p className="text-[11px] leading-4 text-slate-500">{hint}</p>
+        <p className="text-xs leading-5 text-slate-500">{hint}</p>
       ) : null}
     </div>
   )

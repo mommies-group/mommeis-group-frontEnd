@@ -100,6 +100,7 @@ describe('patients notes entry', () => {
     expect(
       screen.getByRole('dialog', { name: 'Clinical notes' }),
     ).toBeInTheDocument()
+    expect(screen.queryByText('Saved notes')).not.toBeInTheDocument()
     expect(screen.getAllByText(/Ava Smith/).length).toBeGreaterThan(0)
     expect(
       screen.getByLabelText('Select Daily reading practice'),
@@ -133,5 +134,41 @@ describe('patients notes entry', () => {
       }),
       expect.anything(),
     )
+  })
+
+  it('closes the notes modal on success and keeps it open on error', () => {
+    mockCreateNote.mockImplementationOnce(
+      (_args: unknown, options?: { onError?: (err: unknown) => void }) => {
+        options?.onError?.(new Error('Failed to save note'))
+      },
+    )
+
+    render(
+      <MemoryRouter>
+        <PatientsPage />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }))
+    fireEvent.change(screen.getByLabelText('Note'), {
+      target: { value: 'Session notes' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }))
+
+    expect(
+      screen.getByRole('dialog', { name: 'Clinical notes' }),
+    ).toBeInTheDocument()
+
+    mockCreateNote.mockImplementationOnce(
+      (_args: unknown, options?: { onSuccess?: () => void }) => {
+        options?.onSuccess?.()
+      },
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }))
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Clinical notes' }),
+    ).not.toBeInTheDocument()
   })
 })

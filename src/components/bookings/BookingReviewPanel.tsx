@@ -106,7 +106,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     proposeTime.isPending ||
     markNoShow.isPending
 
-  if (bookingDetail.isLoading && !bookingDetail.data) {
+  if (bookingDetail.isLoading && !current) {
     return (
       <Card>
         <CardHeader title="Review" />
@@ -254,7 +254,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               <p className="truncate text-sm font-semibold text-slate-900">
                 {current.child.firstName} {current.child.lastName}
               </p>
-              <p className="mt-0.5 truncate text-[11px] text-slate-500">
+              <p className="mt-0.5 truncate text-xs text-slate-500">
                 {current.parent.fullName}
                 {current.parent.email ? ` · ${current.parent.email}` : ''}
               </p>
@@ -266,47 +266,47 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
 
           <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-300 pt-3">
             <div>
-              <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Requested
               </dt>
-              <dd className="mt-0.5 text-[11px] font-medium text-slate-700">
+              <dd className="mt-0.5 text-xs font-medium text-slate-700">
                 {formatDateTime(current.requestedAt)}
               </dd>
             </div>
             <div>
-              <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Scheduled
               </dt>
-              <dd className="mt-0.5 text-[11px] font-medium text-slate-700">
+              <dd className="mt-0.5 text-xs font-medium text-slate-700">
                 {formatScheduledDateTime(current.scheduledAt)}
               </dd>
             </div>
             {current.reason ? (
               <div className="col-span-2">
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Reason
                 </dt>
-                <dd className="mt-0.5 text-[11px] leading-4 text-slate-700">
+                <dd className="mt-0.5 text-xs leading-5 text-slate-700">
                   {current.reason}
                 </dd>
               </div>
             ) : null}
             {current.rejectionReason ? (
               <div className="col-span-2">
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Rejection
                 </dt>
-                <dd className="mt-0.5 text-[11px] leading-4 text-rose-800">
+                <dd className="mt-0.5 text-xs leading-5 text-rose-800">
                   {current.rejectionReason}
                 </dd>
               </div>
             ) : null}
             {current.completionNote ? (
               <div className="col-span-2">
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Completion note
                 </dt>
-                <dd className="mt-0.5 text-[11px] leading-4 text-slate-700">
+                <dd className="mt-0.5 text-xs leading-5 text-slate-700">
                   {current.completionNote}
                 </dd>
               </div>
@@ -317,7 +317,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         {latestProposal ? (
           <div className="mt-2.5 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-sky-950">
+              <p className="text-xs font-semibold text-sky-950">
                 {formatDateTime(latestProposal.proposedAt)}
               </p>
               <Badge tone={proposalTones[latestProposal.status]}>
@@ -325,7 +325,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               </Badge>
             </div>
             {awaitingParentConfirmation ? (
-              <p className="mt-1 text-[10px] text-sky-900">
+              <p className="mt-1 text-[12px] text-sky-900">
                 Approve is enabled once the parent confirms this time.
               </p>
             ) : null}
@@ -345,7 +345,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         ) : null}
 
         {canComplete && !isAppointmentTime && current.scheduledAt ? (
-          <p className="mt-3 text-[10px] font-medium text-slate-500">
+          <p className="mt-3 text-[12px] font-medium text-slate-500">
             Actions unlock at the scheduled time ·{' '}
             {formatScheduledDateTime(current.scheduledAt)}
           </p>
@@ -583,7 +583,6 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           onCompleted={() => {
             void bookingDetail.refetch()
           }}
-          onCreatePlan={openPlan}
         />
       ) : null}
 

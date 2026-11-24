@@ -86,31 +86,31 @@ export function PatientsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th
-                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Child
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Date of birth
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Parent
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Access
                     </th>
                     <th
-                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="whitespace-nowrap border-b border-slate-300 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500"
                       scope="col"
                     >
                       Actions
@@ -149,7 +149,7 @@ export function PatientsPage() {
                       >
                         <td className="border-b border-slate-200 px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-[10px] font-bold text-teal-800">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-[12px] font-bold text-teal-800">
                               {initials(
                                 patient.firstName,
                                 patient.lastName,
@@ -159,7 +159,7 @@ export function PatientsPage() {
                               <p className="truncate text-xs font-semibold text-slate-900">
                                 {patient.firstName} {patient.lastName}
                               </p>
-                              <p className="mt-0.5 text-[10px] text-slate-500">
+                              <p className="mt-0.5 text-[12px] text-slate-500">
                                 {patient.id}
                               </p>
                             </div>
@@ -172,7 +172,7 @@ export function PatientsPage() {
                           <p className="text-xs font-medium text-slate-800">
                             {patient.parent.fullName}
                           </p>
-                          <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                          <p className="mt-0.5 truncate text-[12px] text-slate-500">
                             {patient.parent.email ?? '—'}
                           </p>
                         </td>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { PatientsPage } from '../src/pages/PatientsPage'
+import { PatientRecordPage } from '../src/pages/PatientRecordPage'
 
 const mockUpdateNote = jest.fn()
 const mockDeleteNote = jest.fn()
@@ -44,6 +44,29 @@ jest.mock('../src/hooks/queries/patients/patients.queries', () => ({
     ],
     isLoading: false,
     isError: false,
+  }),
+  useClinicalRecord: () => ({
+    data: {
+      child: {
+        id: 'child-1',
+        firstName: 'Ava',
+        lastName: 'Smith',
+        dateOfBirth: '2018-01-01',
+      },
+      parent: {
+        id: 'parent-1',
+        fullName: 'Jordan Smith',
+        email: 'jordan@example.test',
+      },
+      milestones: [],
+      observations: [],
+      assessments: [],
+      triageHistory: [],
+      clinicalNotes: [savedNote],
+    },
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
   }),
 }))
 
@@ -131,11 +154,10 @@ jest.mock('../src/hooks/mutations/bookings/bookings.mutations', () => ({
 
 function openNotesDialog() {
   render(
-    <MemoryRouter>
-      <PatientsPage />
+    <MemoryRouter initialEntries={['/patients/record?childId=child-1']}>
+      <PatientRecordPage />
     </MemoryRouter>,
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Notes' }))
 }
 
 describe('clinical note edit and delete', () => {

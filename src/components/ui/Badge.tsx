@@ -34,7 +34,7 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-4 tracking-wide ${toneClasses[tone]} ${className}`.trim()}
+      className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold leading-4 tracking-wide ${toneClasses[tone]} ${className}`.trim()}
     >
       {dot ? (
         <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />

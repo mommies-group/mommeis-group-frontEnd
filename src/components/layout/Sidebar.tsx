@@ -55,7 +55,7 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
         >
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
                 {group.label}
               </p>
               <div className="space-y-1">
@@ -107,7 +107,7 @@ export function Sidebar({ path, open, onClose }: SidebarProps) {
                   <p className="truncate text-xs font-semibold text-slate-800">
                     {currentUser.data?.fullName ?? 'Specialist account'}
                   </p>
-                  <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                  <p className="mt-0.5 truncate text-[12px] text-slate-500">
                     {currentUser.data?.specialty ?? 'MindBloom Specialist'}
                   </p>
                 </>

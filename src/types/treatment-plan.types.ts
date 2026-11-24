@@ -112,6 +112,7 @@ export type UpdateTreatmentPlanRequest = {
   treatmentGoals?: string
   totalSessions?: number
   sessionFee?: number
+  discount?: number
   sessions?: TreatmentPlanSessionDraft[]
 }
 

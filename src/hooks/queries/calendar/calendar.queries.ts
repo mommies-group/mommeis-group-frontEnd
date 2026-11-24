@@ -7,5 +7,6 @@ export function useCalendar(from: string, to: string) {
     queryKey: queryKeys.calendar.range(from, to),
     queryFn: ({ signal }) => getCalendar(from, to, signal),
     enabled: Boolean(from && to),
+    refetchInterval: 10_000,
   })
 }

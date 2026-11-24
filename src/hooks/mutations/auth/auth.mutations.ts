@@ -14,6 +14,7 @@ export function useLogin() {
     mutationFn: (payload: LoginRequest) => login(payload),
     onSuccess: (data) => {
       setAuthToken(data.token)
+      queryClient.setQueryData(queryKeys.auth.currentUser, data.specialist)
       void queryClient.invalidateQueries({
         queryKey: queryKeys.auth.currentUser,
       })

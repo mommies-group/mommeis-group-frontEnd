@@ -11,7 +11,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Field, Select } from "../components/ui/Field";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Pagination } from "../components/ui/Pagination";
-import { Skeleton } from "../components/ui/Skeleton";
+import { Spinner } from "../components/ui/Spinner";
 import { usePatients } from "../hooks/queries/patients/patients.queries";
 import { useTreatmentPlans } from "../hooks/queries/treatment-plans/treatment-plans.queries";
 import { formatDateTime } from "../lib/format";
@@ -149,11 +149,7 @@ export function TreatmentPlansPage() {
       <Card>
         <CardHeader title={`Plans (${total})`} />
         {plans.isLoading ? (
-          <div className="grid gap-3 p-5">
-            {[0, 1, 2].map((item) => (
-              <Skeleton className="h-16 w-full rounded-xl" key={item} />
-            ))}
-          </div>
+          <Spinner className="py-10" label="Loading treatment plans…" />
         ) : plans.isError ? (
           <div className="p-5">
             <ApiErrorNotice
@@ -180,11 +176,11 @@ export function TreatmentPlansPage() {
                         </p>
                         <StatusBadge status={plan.status} />
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
+                      <p className="mt-1 text-xs text-slate-500">
                         {patientName(plan.childId)} · {plan.totalSessions}{" "}
                         sessions · {plan.currency ?? ""} {plan.sessionFee}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">
+                      <p className="mt-0.5 text-[12px] text-slate-500">
                         Created {formatDateTime(plan.createdAt)}
                       </p>
                     </div>
@@ -232,9 +228,8 @@ export function TreatmentPlansPage() {
           bookingId={createIntent.bookingId}
           planId={editingPlanId}
           onClose={() => setFormOpen(false)}
-          onSaved={(plan) => {
+          onSaved={() => {
             void plans.refetch();
-            setDetailId(plan.id);
           }}
         />
       ) : null}

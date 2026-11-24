@@ -13,7 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Select } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Pagination } from '../components/ui/Pagination'
-import { Skeleton } from '../components/ui/Skeleton'
+import { Spinner } from '../components/ui/Spinner'
 import { useCalendar } from '../hooks/queries/calendar/calendar.queries'
 import { usePagination } from '../hooks/use-pagination'
 import {
@@ -154,7 +154,7 @@ export function BookingsPage() {
               selectedDateKey ? (
                 <button
                   type="button"
-                  className="text-[11px] font-semibold text-teal-700 hover:text-teal-900"
+                  className="text-xs font-semibold text-teal-700 hover:text-teal-900"
                   onClick={() => setSelectedDateKey(null)}
                 >
                   Clear filter
@@ -164,11 +164,7 @@ export function BookingsPage() {
           />
           <CardBody flush>
             {calendar.isLoading ? (
-              <div className="grid gap-2 p-4">
-                {[0, 1, 2].map((item) => (
-                  <Skeleton className="h-14 w-full rounded-lg" key={item} />
-                ))}
-              </div>
+              <Spinner className="py-10" label="Loading sessions…" />
             ) : calendar.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
@@ -195,7 +191,7 @@ export function BookingsPage() {
                       <p className="truncate text-xs font-semibold text-slate-800">
                         {event.child.firstName} {event.child.lastName}
                       </p>
-                      <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                      <p className="mt-0.5 truncate text-[12px] text-slate-500">
                         {formatScheduledDateTime(event.scheduledAt)}
                       </p>
                     </div>
@@ -233,7 +229,7 @@ export function BookingsPage() {
 
       <Card>
         <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-4">
-          <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+          <h2 className="text-base font-semibold tracking-tight text-slate-900">
             Bookings
           </h2>
           <Select
@@ -254,11 +250,7 @@ export function BookingsPage() {
         </div>
         <CardBody flush>
             {bookings.isLoading ? (
-              <div className="grid gap-2 p-4">
-                {[0, 1, 2].map((item) => (
-                  <Skeleton className="h-16 w-full rounded-xl" key={item} />
-                ))}
-              </div>
+              <Spinner className="py-10" label="Loading bookings…" />
             ) : bookings.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
@@ -295,14 +287,14 @@ export function BookingsPage() {
                           </p>
                           <BookingStatusBadge status={booking.status} />
                         </div>
-                        <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                        <p className="mt-0.5 truncate text-[12px] text-slate-500">
                           {booking.scheduledAt
                             ? formatScheduledDateTime(booking.scheduledAt)
                             : formatDateTime(booking.requestedAt)}{' '}
                           · {booking.parent.fullName}
                         </p>
                         {booking.reason ? (
-                          <p className="mt-1 line-clamp-1 text-[10px] text-slate-500">
+                          <p className="mt-1 line-clamp-1 text-[12px] text-slate-500">
                             {booking.reason}
                           </p>
                         ) : null}

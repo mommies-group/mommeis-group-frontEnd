@@ -18,7 +18,7 @@ import {
   useSubmitTreatmentPlan,
 } from '../../hooks/mutations/treatment-plans/treatment-plans.mutations'
 import { notifyError, notifySuccess } from '../../lib/toast'
-import { formatDateTime } from '../../lib/format'
+import { formatScheduledDateTime } from '../../lib/format'
 import type { TreatmentPlan } from '../../types/treatment-plan.types'
 import { StatusBadge } from './treatment-plan-status'
 import { humanizeTreatmentPlanStatus } from '../../lib/treatment-plan-status'
@@ -91,6 +91,8 @@ export function TreatmentPlanDetailModal({
   const planSessionCount =
     sessionList.length || plan.data?.sessions?.length || plan.data?.totalSessions || 0
   const planFee = plan.data?.sessionFee ?? 0
+  const planDiscount = plan.data?.discount ?? 0
+  const planNetTotal = Math.max(0, planSessionCount * planFee - planDiscount)
 
   const handleSubmitPlan = () => {
     submitPlan.mutate(planId, {
@@ -149,7 +151,6 @@ export function TreatmentPlanDetailModal({
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-        onClick={onClose}
       />
       <div
         aria-labelledby="treatment-plan-detail-title"
@@ -160,7 +161,7 @@ export function TreatmentPlanDetailModal({
         <div className="flex items-center justify-between gap-3 border-b border-slate-300 px-5 py-3.5">
           <div className="min-w-0">
             <h2
-              className="truncate text-sm font-semibold text-slate-900"
+              className="truncate text-base font-semibold text-slate-900"
               id="treatment-plan-detail-title"
             >
               {plan.data?.title ?? 'Treatment plan'}
@@ -168,7 +169,7 @@ export function TreatmentPlanDetailModal({
             {plan.data ? (
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <StatusBadge status={plan.data.status} />
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   {plan.data.totalSessions} sessions · {plan.data.currency}{' '}
                   {plan.data.sessionFee}
                 </span>
@@ -196,22 +197,22 @@ export function TreatmentPlanDetailModal({
           ) : plan.data ? (
             <>
               {plan.data.description ? (
-                <p className="text-[11px] leading-5 text-slate-600">
+                <p className="text-xs leading-5 text-slate-600">
                   {plan.data.description}
                 </p>
               ) : null}
               {plan.data.treatmentGoals ? (
                 <div className="rounded-lg border border-teal-200 bg-teal-50/60 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-800">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-800">
                     Treatment goals
                   </p>
-                  <p className="mt-1 text-[11px] leading-5 text-teal-900">
+                  <p className="mt-1 text-xs leading-5 text-teal-900">
                     {plan.data.treatmentGoals}
                   </p>
                 </div>
               ) : null}
               {plan.data.progress ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-600">
                   <span className="font-semibold text-slate-800">Progress</span>
                   <span className="ml-2">
                     {plan.data.progress.completed ?? 0} /{' '}
@@ -311,7 +312,7 @@ export function TreatmentPlanDetailModal({
                         title="Could not load invoice"
                       />
                     ) : invoice.data ? (
-                      <div className="grid gap-1 text-[11px] text-slate-600">
+                      <div className="grid gap-1 text-xs text-slate-600">
                         <p>
                           <span className="font-semibold text-slate-800">
                             Invoice:
@@ -331,6 +332,15 @@ export function TreatmentPlanDetailModal({
                           {invoice.data.sessionFee ?? planFee}{' '}
                           {plan.data.currency ?? ''}
                         </p>
+                        {(invoice.data.discount ?? planDiscount) > 0 ? (
+                          <p>
+                            <span className="font-semibold text-slate-800">
+                              Discount:
+                            </span>{' '}
+                            −{invoice.data.discount ?? planDiscount}{' '}
+                            {plan.data.currency ?? ''}
+                          </p>
+                        ) : null}
                         <p>
                           <span className="font-semibold text-slate-800">
                             Total:
@@ -339,7 +349,7 @@ export function TreatmentPlanDetailModal({
                         </p>
                       </div>
                     ) : (
-                      <div className="grid gap-1 text-[11px] text-slate-600">
+                      <div className="grid gap-1 text-xs text-slate-600">
                         <p>
                           <span className="font-semibold text-slate-800">
                             Sessions:
@@ -352,13 +362,21 @@ export function TreatmentPlanDetailModal({
                           </span>{' '}
                           {planFee} {plan.data.currency ?? ''}
                         </p>
+                        {planDiscount > 0 ? (
+                          <p>
+                            <span className="font-semibold text-slate-800">
+                              Discount:
+                            </span>{' '}
+                            −{planDiscount} {plan.data.currency ?? ''}
+                          </p>
+                        ) : null}
                         <p>
                           <span className="font-semibold text-slate-800">
                             Total:
                           </span>{' '}
-                          {planSessionCount * planFee} {plan.data.currency ?? ''}
+                          {planNetTotal} {plan.data.currency ?? ''}
                         </p>
-                        <p className="mt-1 text-[10px] text-slate-400">
+                        <p className="mt-1 text-[12px] text-slate-400">
                           Invoice not issued yet — showing plan summary.
                         </p>
                       </div>
@@ -385,8 +403,8 @@ export function TreatmentPlanDetailModal({
                             <p className="text-xs font-semibold text-slate-900">
                               Session {session.sessionNumber}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">
-                              {formatDateTime(session.scheduledAt)} ·{' '}
+                            <p className="mt-0.5 text-[12px] text-slate-500">
+                              {formatScheduledDateTime(session.scheduledAt)} ·{' '}
                               {session.durationMinutes} min
                             </p>
                           </div>
@@ -404,7 +422,7 @@ export function TreatmentPlanDetailModal({
                         </div>
 
                         {session.notes ? (
-                          <p className="mt-2 text-[11px] leading-5 text-slate-600">
+                          <p className="mt-2 text-xs leading-5 text-slate-600">
                             {session.notes}
                           </p>
                         ) : null}
@@ -459,7 +477,7 @@ export function TreatmentPlanDetailModal({
                             {sessionDetail.isLoading ? (
                               <Spinner label="Loading session…" />
                             ) : sessionDetail.data ? (
-                              <div className="grid gap-1 text-[11px] text-slate-600">
+                              <div className="grid gap-1 text-xs text-slate-600">
                                 <p>
                                   <span className="font-semibold text-slate-800">
                                     Status:
@@ -470,7 +488,7 @@ export function TreatmentPlanDetailModal({
                                   <span className="font-semibold text-slate-800">
                                     Scheduled:
                                   </span>{' '}
-                                  {formatDateTime(sessionDetail.data.scheduledAt)}
+                                  {formatScheduledDateTime(sessionDetail.data.scheduledAt)}
                                 </p>
                                 {sessionDetail.data.notes ? (
                                   <p>{sessionDetail.data.notes}</p>
@@ -483,7 +501,7 @@ export function TreatmentPlanDetailModal({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-500">
                     No sessions scheduled.
                   </p>
                 )}

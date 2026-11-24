@@ -78,6 +78,7 @@ export async function updateTreatmentPlan(
 export async function submitTreatmentPlan(planId: string): Promise<TreatmentPlan> {
   const response = await apiClient.post<ApiSuccessResponse<TreatmentPlan>>(
     `${basePath(planId)}/submit`,
+    {},
   )
   return unwrapApiData(response)
 }

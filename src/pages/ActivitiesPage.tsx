@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Icon } from '../components/icons/Icon'
 import { ApiErrorNotice } from '../components/ui/ApiErrorNotice'
@@ -9,7 +9,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Pagination } from '../components/ui/Pagination'
-import { Skeleton } from '../components/ui/Skeleton'
+import { Spinner } from '../components/ui/Spinner'
 import {
   useCreateCustomActivity,
   useDeactivateCustomActivity,
@@ -99,15 +99,26 @@ export function ActivitiesPage() {
   const [source, setSource] = useState<CatalogActivitySourceFilter>('all')
   const [category, setCategory] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [form, setForm] = useState<CustomForm>(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null)
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [search])
+
   const activities = useCatalogActivities({
     source,
     category: category || undefined,
-    search: search.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
   })
+  const isLoadingActivities =
+    activities.isLoading || search.trim() !== debouncedSearch.trim()
   const createActivity = useCreateCustomActivity()
   const updateActivity = useUpdateCustomActivity()
   const deactivateActivity = useDeactivateCustomActivity()
@@ -302,12 +313,8 @@ export function ActivitiesPage() {
             }
           />
           <CardBody flush>
-            {activities.isLoading ? (
-              <div className="grid gap-2 p-4">
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-24 w-full rounded-xl" />
-              </div>
+            {isLoadingActivities ? (
+              <Spinner className="py-10" label="Loading activities…" />
             ) : activities.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
@@ -337,7 +344,7 @@ export function ActivitiesPage() {
                             <Badge tone="neutral">Inactive</Badge>
                           ) : null}
                         </div>
-                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-600">
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
                           {activity.description ?? activity.instructions}
                         </p>
                       </div>
@@ -383,7 +390,7 @@ export function ActivitiesPage() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-slate-500">
                       <span>{categoryLabel(activity.category)}</span>
                       {activity.developmentalArea ? (
                         <span>{activity.developmentalArea}</span>
@@ -514,7 +521,7 @@ export function ActivitiesPage() {
                         type="number"
                         value={form.durationMinutes}
                       />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-slate-500">
                         min
                       </span>
                     </span>

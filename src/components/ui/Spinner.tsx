@@ -7,7 +7,7 @@ export function Spinner({ label = 'Loading…', className = '' }: SpinnerProps) 
   return (
     <div
       aria-live="polite"
-      className={`flex items-center justify-center gap-2 text-[11px] text-slate-500 ${className}`.trim()}
+      className={`flex items-center justify-center gap-2 text-xs text-slate-500 ${className}`.trim()}
       role="status"
     >
       <span
