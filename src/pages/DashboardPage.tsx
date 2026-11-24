@@ -398,25 +398,8 @@ export function DashboardPage() {
           </Card>
         </div>
 
-        <Card className="min-w-0">
-          <CardHeader
-            title="Pending requests"
-            action={
-              <button
-                type="button"
-                className={buttonStyles({ variant: 'ghost', size: 'sm' })}
-                disabled={!firstPendingId}
-                onClick={() => {
-                  if (firstPendingId) {
-                    setReviewBookingId(firstPendingId)
-                  }
-                }}
-              >
-                Review
-                <Icon name="arrow-right" size={12} />
-              </button>
-            }
-          />
+        <Card className="min-w-0 py-1.5">
+          <CardHeader title="Pending requests" />
           <CardBody flush>
             {pendingBookings.isLoading ? (
               <div className="grid gap-2 p-4">
