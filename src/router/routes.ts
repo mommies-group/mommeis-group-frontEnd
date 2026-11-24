@@ -99,6 +99,10 @@ export function patientRecordPath(childId: string): string {
   return `${ROUTES.patientRecord}?childId=${encodeURIComponent(childId)}`
 }
 
+export function patientNoteRecordPath(noteId: string): string {
+  return `${ROUTES.patientRecord}?noteId=${encodeURIComponent(noteId)}#clinical-notes`
+}
+
 export function treatmentPlansCreatePath(
   childId: string,
   bookingId?: string | null,

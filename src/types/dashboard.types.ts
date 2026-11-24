@@ -15,6 +15,7 @@ export type DashboardRecentActivity = {
   id: string
   type: 'NOTE' | 'ACTIVITY'
   title: string
+  childId?: string | null
   createdAt: string
 }
 

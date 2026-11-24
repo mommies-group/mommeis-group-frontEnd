@@ -1,42 +1,54 @@
 import type { ReactNode } from 'react'
-import { Icon } from '../icons/Icon'
+import { Icon, type IconName } from '../icons/Icon'
 import { Button } from './Button'
-import { getApiErrorMessage } from '../../lib/api-error'
+import { getLoadErrorInfo, type LoadErrorContext } from '../../lib/api-error'
 
 type ApiErrorNoticeProps = {
   error: unknown
+  context?: LoadErrorContext
   title?: string
+  icon?: IconName
   onRetry?: () => void
   action?: ReactNode
   className?: string
 }
 
+const iconToneClasses = {
+  neutral: 'border-slate-300 bg-white text-slate-500',
+  warning: 'border-amber-200 bg-amber-50 text-amber-700',
+  danger: 'border-rose-200 bg-rose-50 text-rose-600',
+} as const
+
 export function ApiErrorNotice({
   error,
-  title = 'Could not load this information',
+  context,
+  title,
+  icon,
   onRetry,
   action,
   className = '',
 }: ApiErrorNoticeProps) {
+  const info = getLoadErrorInfo(error, context, title)
+  const resolvedIcon = icon ?? info.icon
+  const showRetry = Boolean(onRetry) && info.canRetry
+
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-950 sm:flex-row sm:items-start sm:justify-between ${className}`.trim()}
+      className={`mx-auto flex w-full max-w-lg flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50/70 px-6 py-7 text-center ${className}`.trim()}
       role="alert"
     >
-      <div className="flex min-w-0 gap-2.5">
-        <span className="mt-0.5 shrink-0 text-rose-600">
-          <Icon name="alert" size={16} />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-rose-900">
-            {getApiErrorMessage(error)}
-          </p>
-        </div>
-      </div>
-      {onRetry || action ? (
-        <div className="flex shrink-0 flex-wrap gap-2">
-          {onRetry ? (
+      <span
+        className={`flex h-11 w-11 items-center justify-center rounded-full border ${iconToneClasses[info.tone]}`}
+      >
+        <Icon name={resolvedIcon} size={20} />
+      </span>
+      <p className="mt-3 text-sm font-semibold text-slate-900">{info.title}</p>
+      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-600">
+        {info.description}
+      </p>
+      {showRetry || action ? (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {showRetry ? (
             <Button variant="secondary" size="sm" onClick={onRetry}>
               <Icon name="repeat" size={12} />
               Try again

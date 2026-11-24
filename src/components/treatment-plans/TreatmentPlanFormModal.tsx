@@ -539,8 +539,12 @@ export function TreatmentPlanFormModal({
         ) : isEdit && plan.isError ? (
           <div className="p-5">
             <ApiErrorNotice
+              context="treatmentPlan"
               error={plan.error}
               title="Could not load treatment plan"
+              onRetry={() => {
+                void plan.refetch()
+              }}
             />
           </div>
         ) : (

@@ -73,6 +73,7 @@ export function PatientsPage() {
           {patients.isError ? (
             <div className="p-4">
               <ApiErrorNotice
+                context="patients"
                 error={patients.error}
                 title="Could not load patients"
                 onRetry={() => {
@@ -158,9 +159,6 @@ export function PatientsPage() {
                             <div className="min-w-0">
                               <p className="truncate text-xs font-semibold text-slate-900">
                                 {patient.firstName} {patient.lastName}
-                              </p>
-                              <p className="mt-0.5 text-[12px] text-slate-500">
-                                {patient.id}
                               </p>
                             </div>
                           </div>

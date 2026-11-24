@@ -4,13 +4,20 @@ type CardProps = {
   children: ReactNode
   className?: string
   as?: 'section' | 'div' | 'article'
+  id?: string
 }
 
-export function Card({ children, className = '', as = 'section' }: CardProps) {
+export function Card({
+  children,
+  className = '',
+  as = 'section',
+  id,
+}: CardProps) {
   const Tag = as
   return (
     <Tag
       className={`min-w-0 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm ${className}`.trim()}
+      id={id}
     >
       {children}
     </Tag>

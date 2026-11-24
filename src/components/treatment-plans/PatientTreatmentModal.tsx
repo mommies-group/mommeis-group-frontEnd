@@ -102,6 +102,7 @@ export function PatientTreatmentModal({
               <Spinner label="Loading treatment plans…" />
             ) : plans.isError ? (
               <ApiErrorNotice
+                context="treatmentPlans"
                 error={plans.error}
                 title="Could not load treatment plans"
                 onRetry={() => {

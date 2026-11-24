@@ -97,6 +97,7 @@ export type ErrorAction =
   | 'note.create'
   | 'note.update'
   | 'note.delete'
+  | 'note.open'
   | 'treatmentPlan.create'
   | 'treatmentPlan.update'
   | 'treatmentPlan.submit'
@@ -152,6 +153,10 @@ const ACTION_ERROR_MESSAGES: Record<
   'note.delete': {
     default:
       'Could not delete the clinical note. It may have already been removed.',
+  },
+  'note.open': {
+    default:
+      'Could not open this clinical note. It may have been removed or access is locked.',
   },
   'treatmentPlan.create': {
     conflict:
@@ -328,4 +333,406 @@ export function getActionErrorMessage(
   }
 
   return config.default
+}
+
+export type LoadErrorContext =
+  | 'dashboard'
+  | 'bookings'
+  | 'booking'
+  | 'schedule'
+  | 'meeting'
+  | 'patients'
+  | 'clinicalRecord'
+  | 'clinicalNote'
+  | 'activities'
+  | 'availability'
+  | 'profile'
+  | 'pricing'
+  | 'treatmentPlans'
+  | 'treatmentPlan'
+  | 'treatmentPlanSessions'
+  | 'treatmentPlanInvoice'
+
+export type LoadErrorIcon =
+  | 'alert'
+  | 'lock'
+  | 'video'
+  | 'notes'
+  | 'calendar'
+  | 'inbox'
+  | 'dashboard'
+  | 'users'
+  | 'id-card'
+  | 'activity'
+  | 'clock'
+  | 'file'
+
+export type LoadErrorInfo = {
+  title: string
+  description: string
+  tone: 'neutral' | 'warning' | 'danger'
+  canRetry: boolean
+  icon: LoadErrorIcon
+}
+
+type LoadErrorContextConfig = {
+  icon: LoadErrorIcon
+  notFound: { title: string; description: string }
+  access: { title: string; description: string }
+  default: { title: string; description: string }
+}
+
+const LOAD_ERROR_MESSAGES: Record<LoadErrorContext, LoadErrorContextConfig> = {
+  meeting: {
+    icon: 'video',
+    notFound: {
+      title: 'Meeting room is no longer available',
+      description:
+        'This booking could not be found or its meeting room has been removed.',
+    },
+    access: {
+      title: 'Meeting room is not available',
+      description:
+        'This session is not active right now, has already ended, or is no longer confirmed.',
+    },
+    default: {
+      title: 'Could not load meeting room',
+      description:
+        'Unable to load the video session right now. Check your connection and try again.',
+    },
+  },
+  booking: {
+    icon: 'calendar',
+    notFound: {
+      title: 'Booking is no longer available',
+      description: 'This booking may have been cancelled or removed.',
+    },
+    access: {
+      title: 'Booking unavailable',
+      description: 'You no longer have access to view this booking.',
+    },
+    default: {
+      title: 'Could not refresh booking',
+      description:
+        'Unable to load the latest booking details right now. Please try again.',
+    },
+  },
+  bookings: {
+    icon: 'inbox',
+    notFound: {
+      title: 'No bookings found',
+      description: 'Could not find bookings for this filter.',
+    },
+    access: {
+      title: 'Bookings unavailable',
+      description: 'You do not have permission to view these bookings.',
+    },
+    default: {
+      title: 'Could not load bookings',
+      description:
+        'Unable to load your bookings right now. Check your connection and try again.',
+    },
+  },
+  schedule: {
+    icon: 'calendar',
+    notFound: {
+      title: 'Schedule unavailable',
+      description: 'No schedule details were found for this period.',
+    },
+    access: {
+      title: 'Schedule unavailable',
+      description: 'You do not have permission to view this schedule.',
+    },
+    default: {
+      title: 'Could not load the schedule',
+      description:
+        'Unable to load your calendar sessions right now. Please try again.',
+    },
+  },
+  dashboard: {
+    icon: 'dashboard',
+    notFound: {
+      title: 'Dashboard summary unavailable',
+      description: 'Could not find your practice summary right now.',
+    },
+    access: {
+      title: 'Dashboard unavailable',
+      description:
+        'Your account does not currently have access to the dashboard.',
+    },
+    default: {
+      title: 'Could not load your dashboard',
+      description:
+        'Unable to refresh your practice overview right now. Please try again.',
+    },
+  },
+  patients: {
+    icon: 'users',
+    notFound: {
+      title: 'Patients list unavailable',
+      description: 'No assigned patients could be retrieved right now.',
+    },
+    access: {
+      title: 'Patients list locked',
+      description: 'You do not have permission to view the patients list.',
+    },
+    default: {
+      title: 'Could not load patients',
+      description:
+        'Unable to load your assigned patients right now. Please try again.',
+    },
+  },
+  clinicalRecord: {
+    icon: 'id-card',
+    notFound: {
+      title: 'Clinical record is no longer available',
+      description:
+        'This patient record could not be found or is no longer accessible.',
+    },
+    access: {
+      title: 'Clinical record locked',
+      description:
+        'Parental consent and an active or recently completed appointment are required to view this record.',
+    },
+    default: {
+      title: 'Could not load the clinical record',
+      description:
+        'Unable to load this patient’s clinical record right now. Please try again.',
+    },
+  },
+  clinicalNote: {
+    icon: 'notes',
+    notFound: {
+      title: 'This clinical note is no longer available',
+      description:
+        'It may have been deleted or removed from the patient’s record.',
+    },
+    access: {
+      title: 'Clinical note locked',
+      description:
+        'Parental consent and an active or recently completed appointment are required to view this note.',
+    },
+    default: {
+      title: 'Could not load this note',
+      description:
+        'Unable to load this clinical note right now. Please try again.',
+    },
+  },
+  activities: {
+    icon: 'activity',
+    notFound: {
+      title: 'Activities unavailable',
+      description: 'The activity library could not be found.',
+    },
+    access: {
+      title: 'Activities unavailable',
+      description: 'You do not have permission to view the activity library.',
+    },
+    default: {
+      title: 'Could not load activities',
+      description:
+        'Unable to load the activity library right now. Please try again.',
+    },
+  },
+  availability: {
+    icon: 'clock',
+    notFound: {
+      title: 'Availability unavailable',
+      description: 'Your weekly availability schedule could not be found.',
+    },
+    access: {
+      title: 'Availability unavailable',
+      description:
+        'You do not have permission to view this availability schedule.',
+    },
+    default: {
+      title: 'Could not load availability',
+      description:
+        'Unable to load your weekly availability right now. Please try again.',
+    },
+  },
+  profile: {
+    icon: 'id-card',
+    notFound: {
+      title: 'Profile unavailable',
+      description: 'Your specialist profile could not be found.',
+    },
+    access: {
+      title: 'Profile unavailable',
+      description: 'You do not have permission to view this profile.',
+    },
+    default: {
+      title: 'Could not load your profile',
+      description:
+        'Unable to load your specialist profile right now. Please try again.',
+    },
+  },
+  pricing: {
+    icon: 'id-card',
+    notFound: {
+      title: 'Pricing not configured',
+      description: 'Your consultation and session pricing could not be found.',
+    },
+    access: {
+      title: 'Pricing unavailable',
+      description: 'You do not have permission to view pricing details.',
+    },
+    default: {
+      title: 'Could not load pricing',
+      description:
+        'Unable to load your session pricing right now. Please try again.',
+    },
+  },
+  treatmentPlans: {
+    icon: 'file',
+    notFound: {
+      title: 'No treatment plans found',
+      description: 'Treatment plans could not be found for this filter.',
+    },
+    access: {
+      title: 'Treatment plans unavailable',
+      description:
+        'You do not have permission to view these treatment plans.',
+    },
+    default: {
+      title: 'Could not load treatment plans',
+      description:
+        'Unable to load treatment plans right now. Please try again.',
+    },
+  },
+  treatmentPlan: {
+    icon: 'file',
+    notFound: {
+      title: 'This treatment plan is no longer available',
+      description: 'It may have been deleted or cancelled.',
+    },
+    access: {
+      title: 'Treatment plan unavailable',
+      description:
+        'You no longer have permission to view this treatment plan.',
+    },
+    default: {
+      title: 'Could not load treatment plan',
+      description:
+        'Unable to load this treatment plan right now. Please try again.',
+    },
+  },
+  treatmentPlanSessions: {
+    icon: 'calendar',
+    notFound: {
+      title: 'Sessions are no longer available',
+      description: 'No sessions could be found for this treatment plan.',
+    },
+    access: {
+      title: 'Sessions unavailable',
+      description:
+        'You do not have permission to view sessions for this plan.',
+    },
+    default: {
+      title: 'Could not load sessions',
+      description:
+        'Unable to load the sessions for this treatment plan right now. Please try again.',
+    },
+  },
+  treatmentPlanInvoice: {
+    icon: 'file',
+    notFound: {
+      title: 'Invoice not issued yet',
+      description: 'No invoice is available for this treatment plan yet.',
+    },
+    access: {
+      title: 'Invoice unavailable',
+      description: 'You do not have permission to view this invoice.',
+    },
+    default: {
+      title: 'Could not load invoice',
+      description:
+        'Unable to load the invoice for this treatment plan right now. Please try again.',
+    },
+  },
+}
+
+export function isNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 404 || error.code === 'NOT_FOUND')
+  )
+}
+
+export function isLockedError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === 'CONSENT_REQUIRED' ||
+      error.code === 'NO_ELIGIBLE_APPOINTMENT' ||
+      error.code === 'FORBIDDEN' ||
+      error.code === 'INVALID_BOOKING_STATE' ||
+      error.status === 403)
+  )
+}
+
+export function getLoadErrorInfo(
+  error: unknown,
+  context?: LoadErrorContext,
+  fallbackTitle?: string,
+): LoadErrorInfo {
+  const ctx = context ? LOAD_ERROR_MESSAGES[context] : undefined
+
+  if (isNotFoundError(error)) {
+    return {
+      tone: 'neutral',
+      canRetry: false,
+      icon: ctx?.icon ?? 'alert',
+      title: ctx ? ctx.notFound.title : (fallbackTitle ?? 'Item is no longer available'),
+      description: ctx
+        ? ctx.notFound.description
+        : 'It may have been deleted or removed.',
+    }
+  }
+
+  if (isLockedError(error)) {
+    return {
+      tone: 'warning',
+      canRetry: false,
+      icon: 'lock',
+      title: ctx ? ctx.access.title : (fallbackTitle ?? 'Access unavailable'),
+      description:
+        error instanceof ApiError && error.code === 'CONSENT_REQUIRED'
+          ? error.message
+          : ctx
+            ? ctx.access.description
+            : getApiErrorMessage(error),
+    }
+  }
+
+  if (
+    error instanceof ApiError &&
+    (error.code === 'NETWORK_ERROR' ||
+      error.code === 'TIMEOUT' ||
+      error.code === 'UNAUTHORIZED' ||
+      error.code === 'INVALID_TOKEN')
+  ) {
+    return {
+      tone: 'danger',
+      canRetry: error.code === 'NETWORK_ERROR' || error.code === 'TIMEOUT',
+      icon: ctx?.icon ?? 'alert',
+      title:
+        fallbackTitle ?? ctx?.default.title ?? 'Could not load this information',
+      description: error.message,
+    }
+  }
+
+  const raw = getApiErrorMessage(error)
+  const description =
+    ctx && GENERIC_ERROR_MESSAGES.has(raw.trim().toLowerCase())
+      ? ctx.default.description
+      : raw
+
+  return {
+    tone: 'danger',
+    canRetry: true,
+    icon: ctx?.icon ?? 'alert',
+    title:
+      fallbackTitle ?? ctx?.default.title ?? 'Could not load this information',
+    description,
+  }
 }

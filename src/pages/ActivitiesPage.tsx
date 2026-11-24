@@ -327,6 +327,7 @@ export function ActivitiesPage() {
             ) : activities.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
+                  context="activities"
                   error={activities.error}
                   title="Could not load activities"
                   onRetry={() => {

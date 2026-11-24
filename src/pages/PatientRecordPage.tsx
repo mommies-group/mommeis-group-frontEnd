@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ClinicalNoteEditModal } from '../components/notes/ClinicalNoteEditModal'
 import { ClinicalNoteModal } from '../components/notes/ClinicalNoteModal'
 import { Icon, type IconName } from '../components/icons/Icon'
@@ -14,10 +14,14 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { Pagination } from '../components/ui/Pagination'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Spinner } from '../components/ui/Spinner'
-import { useClinicalNotes } from '../hooks/queries/clinical-notes/clinical-notes.queries'
+import {
+  useClinicalNote,
+  useClinicalNotes,
+} from '../hooks/queries/clinical-notes/clinical-notes.queries'
 import { useClinicalRecord } from '../hooks/queries/patients/patients.queries'
 import { usePagination } from '../hooks/use-pagination'
 import {
+  ApiError,
   getApiErrorMessage,
   getApiErrorCode,
   isAccessError,
@@ -33,6 +37,7 @@ type RecordSectionProps = {
   title: string
   icon: IconName
   wide?: boolean
+  id?: string
   action?: ReactNode
   children: ReactNode
 }
@@ -41,12 +46,14 @@ function RecordSection({
   title,
   icon,
   wide = false,
+  id,
   action,
   children,
 }: RecordSectionProps) {
   return (
     <Card
       className={`flex h-full min-h-0 flex-col ${wide ? 'xl:col-span-2' : ''}`}
+      id={id}
     >
       <div className="flex flex-col gap-2 border-b border-slate-300 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold text-slate-900">
@@ -80,13 +87,36 @@ function RiskBadge({ level }: { level: string }) {
 }
 
 export function PatientRecordPage() {
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [deleteMode, setDeleteMode] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
-  const childId = searchParams.get('childId')
+  const childIdParam = searchParams.get('childId')
+  const noteIdParam = searchParams.get('noteId')
+  const linkedNote = useClinicalNote(childIdParam ? null : noteIdParam)
+  const childId = childIdParam ?? linkedNote.data?.childId ?? null
+  const isResolvingNote =
+    !childIdParam && Boolean(noteIdParam) && linkedNote.isLoading
+  const noteResolveError =
+    !childIdParam && Boolean(noteIdParam) && linkedNote.isError
+  const noteNotFound =
+    noteResolveError &&
+    linkedNote.error instanceof ApiError &&
+    (linkedNote.error.status === 404 || linkedNote.error.code === 'NOT_FOUND')
+  const noteAccessError = noteResolveError && isAccessError(linkedNote.error)
   const record = useClinicalRecord(childId)
   const clinicalNotes = useClinicalNotes(childId)
+
+  useEffect(() => {
+    if (location.hash !== '#clinical-notes' || !record.data) {
+      return
+    }
+    const section = document.getElementById('clinical-notes')
+    if (typeof section?.scrollIntoView === 'function') {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [location.hash, record.data])
   const milestonesPager = usePagination(
     record.data?.milestones ?? [],
     5,
@@ -133,7 +163,7 @@ export function PatientRecordPage() {
         }
       />
 
-      {!childId ? (
+      {!childId && !isResolvingNote && !noteResolveError ? (
         <Card>
           <div className="p-6">
             <EmptyState
@@ -145,7 +175,7 @@ export function PatientRecordPage() {
         </Card>
       ) : null}
 
-      {childId && record.isLoading ? (
+      {isResolvingNote || (childId && record.isLoading) ? (
         <div className="grid gap-5 xl:grid-cols-2">
           {[0, 1, 2, 3].map((item) => (
             <Card key={item} className="p-6">
@@ -156,6 +186,63 @@ export function PatientRecordPage() {
             </Card>
           ))}
         </div>
+      ) : null}
+
+      {noteResolveError ? (
+        <Card className="mx-auto w-full max-w-lg">
+          <div className="px-6 py-4">
+            <EmptyState
+              icon={noteAccessError ? 'lock' : 'notes'}
+              title={
+                noteNotFound
+                  ? 'This clinical note is no longer available'
+                  : noteAccessError
+                    ? 'Clinical note locked'
+                    : 'Unable to open this note right now'
+              }
+              description={
+                noteNotFound
+                  ? 'It may have been deleted or removed from the patient’s record.'
+                  : getApiErrorMessage(linkedNote.error)
+              }
+              action={
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {!noteNotFound && !noteAccessError ? (
+                    <Button
+                      onClick={() => {
+                        void linkedNote.refetch()
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="primary"
+                    >
+                      <Icon name="repeat" size={14} />
+                      Try again
+                    </Button>
+                  ) : null}
+                  <Link
+                    className={buttonStyles({
+                      variant:
+                        noteNotFound || noteAccessError ? 'primary' : 'secondary',
+                      size: 'sm',
+                    })}
+                    to={ROUTES.dashboard}
+                  >
+                    <Icon name="arrow-left" size={14} />
+                    Back to dashboard
+                  </Link>
+                  <Link
+                    className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+                    to={ROUTES.patients}
+                  >
+                    <Icon name="users" size={14} />
+                    My patients
+                  </Link>
+                </div>
+              }
+            />
+          </div>
+        </Card>
       ) : null}
 
       {childId && accessError ? (
@@ -198,6 +285,7 @@ export function PatientRecordPage() {
 
       {childId && record.isError && !accessError ? (
         <ApiErrorNotice
+          context="clinicalRecord"
           error={record.error}
           title="Could not load the clinical record"
           onRetry={() => {
@@ -418,6 +506,7 @@ export function PatientRecordPage() {
             title="Clinical notes"
             icon="notes"
             wide
+            id="clinical-notes"
             action={
               <Button
                 onClick={() => setNotesOpen(true)}
@@ -432,6 +521,15 @@ export function PatientRecordPage() {
           >
             {clinicalNotes.isLoading ? (
               <Spinner label="Loading notes…" />
+            ) : clinicalNotes.isError ? (
+              <ApiErrorNotice
+                context="clinicalNote"
+                error={clinicalNotes.error}
+                title="Could not load clinical notes"
+                onRetry={() => {
+                  void clinicalNotes.refetch()
+                }}
+              />
             ) : clinicalNotes.data && clinicalNotes.data.length > 0 ? (
               <div className="space-y-4">
                 {notesPager.visibleItems.map((note) => (

@@ -1,7 +1,9 @@
 import { describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { Icon } from '../src/components/icons/Icon'
+import { ErrorBoundary } from '../src/components/layout/ErrorBoundary'
 import { ApiErrorNotice } from '../src/components/ui/ApiErrorNotice'
+import { ApiError } from '../src/lib/api-error'
 import { Avatar } from '../src/components/ui/Avatar'
 import { Badge } from '../src/components/ui/Badge'
 import { Button } from '../src/components/ui/Button'
@@ -162,6 +164,51 @@ describe('ApiErrorNotice', () => {
     fireEvent.click(screen.getByRole('button', { name: /try again/i }))
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
+
+  it('shows context-specific copy and hides retry for 404 errors', () => {
+    render(
+      <ApiErrorNotice
+        context="treatmentPlan"
+        error={new ApiError('Not found', 404, 'NOT_FOUND')}
+        title="Could not load treatment plan"
+        onRetry={jest.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This treatment plan is no longer available',
+    )
+    expect(
+      screen.queryByRole('button', { name: /try again/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows context-specific locked copy and hides retry for NO_ELIGIBLE_APPOINTMENT errors', () => {
+    render(
+      <ApiErrorNotice
+        context="meeting"
+        error={
+          new ApiError(
+            'This patient does not have an active or recently completed appointment with you.',
+            403,
+            'NO_ELIGIBLE_APPOINTMENT',
+          )
+        }
+        title="Could not load meeting room"
+        onRetry={jest.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Meeting room is not available',
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This session is not active right now, has already ended, or is no longer confirmed.',
+    )
+    expect(
+      screen.queryByRole('button', { name: /try again/i }),
+    ).not.toBeInTheDocument()
+  })
 })
 
 describe('Callout', () => {
@@ -244,5 +291,31 @@ describe('Icon', () => {
   it('renders a decorative svg', () => {
     const { container } = render(<Icon name="calendar" />)
     expect(container.querySelector('svg')).toBeInTheDocument()
+  })
+})
+
+function CrashOnRender(): never {
+  throw new Error('Unexpected render crash')
+}
+
+describe('ErrorBoundary', () => {
+  it('renders recovery actions when a child component throws', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(
+      <ErrorBoundary>
+        <CrashOnRender />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong')
+    expect(
+      screen.getByRole('button', { name: /Reload page/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /Back to dashboard/i }),
+    ).toBeInTheDocument()
+
+    errorSpy.mockRestore()
   })
 })

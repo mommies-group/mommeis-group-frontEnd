@@ -382,6 +382,7 @@ export function AvailabilityPage() {
 
       {availability.isError ? (
         <ApiErrorNotice
+          context="availability"
           error={availability.error}
           title="Could not load availability"
           onRetry={() => {

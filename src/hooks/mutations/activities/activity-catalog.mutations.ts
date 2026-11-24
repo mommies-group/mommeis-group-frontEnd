@@ -19,6 +19,9 @@ function useInvalidateCatalog() {
     void queryClient.invalidateQueries({
       queryKey: queryKeys.activityCatalog.all,
     })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.dashboard.summary,
+    })
   }
 }
 

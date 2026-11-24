@@ -24,7 +24,7 @@ import {
   formatScheduledDateTime,
   parseScheduledDate,
   toDateKey,
-  toDateTimeIso,
+  toScheduledIso,
 } from '../../lib/format'
 import type { Booking, ProposalStatus } from '../../types/booking.types'
 import { BookingStatusBadge } from './bookingStatus'
@@ -137,8 +137,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
 
   const canDecide =
     current.status === 'PENDING' || current.status === 'RESCHEDULE_PENDING'
-  const canPropose =
-    current.status === 'PENDING' || current.status === 'RESCHEDULE_PENDING'
+  const canPropose = current.status === 'PENDING'
   const canComplete = current.status === 'CONFIRMED'
   const canMeet = current.status === 'CONFIRMED'
   const latestProposal = current.proposals[0]
@@ -188,14 +187,15 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   }
 
   const handlePropose = () => {
-    const proposedAt = toDateTimeIso(proposedDate, proposedTime)
+    const proposedAt = toScheduledIso(proposedDate, proposedTime)
 
     if (!proposedAt) {
       notifyError(null, 'Choose a proposed date and time.')
       return
     }
 
-    if (new Date(proposedAt).getTime() <= Date.now()) {
+    const parsedProposed = parseScheduledDate(proposedAt)
+    if (!parsedProposed || parsedProposed.getTime() <= Date.now()) {
       notifyError(null, 'Choose a future date and time.')
       return
     }
@@ -315,7 +315,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           <div className="mt-2.5 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-semibold text-sky-950">
-                {formatDateTime(latestProposal.proposedAt)}
+                {formatScheduledDateTime(latestProposal.proposedAt)}
               </p>
               <Badge tone={proposalTones[latestProposal.status]}>
                 {proposalLabels[latestProposal.status]}
@@ -332,6 +332,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         {bookingDetail.isError ? (
           <div className="mt-3">
             <ApiErrorNotice
+              context="booking"
               error={bookingDetail.error}
               title="Could not refresh booking"
               onRetry={() => {

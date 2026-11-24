@@ -205,8 +205,12 @@ export function TreatmentPlanDetailModal({
             <Spinner label="Loading treatment plan…" />
           ) : plan.isError ? (
             <ApiErrorNotice
+              context="treatmentPlan"
               error={plan.error}
               title="Could not load treatment plan"
+              onRetry={() => {
+                void plan.refetch()
+              }}
             />
           ) : plan.data ? (
             <>
@@ -322,8 +326,12 @@ export function TreatmentPlanDetailModal({
                       <Spinner label="Loading invoice…" />
                     ) : invoice.isError ? (
                       <ApiErrorNotice
+                        context="treatmentPlanInvoice"
                         error={invoice.error}
                         title="Could not load invoice"
+                        onRetry={() => {
+                          void invoice.refetch()
+                        }}
                       />
                     ) : invoice.data ? (
                       <div className="grid gap-1 text-xs text-slate-600">
@@ -402,8 +410,12 @@ export function TreatmentPlanDetailModal({
                   <Spinner label="Loading sessions…" />
                 ) : sessions.isError ? (
                   <ApiErrorNotice
+                    context="treatmentPlanSessions"
                     error={sessions.error}
                     title="Could not load sessions"
+                    onRetry={() => {
+                      void sessions.refetch()
+                    }}
                   />
                 ) : sessionList.length ? (
                   <div className="space-y-2">

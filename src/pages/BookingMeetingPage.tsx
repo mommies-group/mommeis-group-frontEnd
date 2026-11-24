@@ -231,8 +231,18 @@ export function BookingMeetingPage() {
         <Card>
           <CardBody>
             <ApiErrorNotice
+              context="meeting"
               error={meeting.error}
               title="Could not load meeting room"
+              action={
+                <Link
+                  className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+                  to={ROUTES.bookings}
+                >
+                  <Icon name="arrow-left" size={14} />
+                  Back to bookings
+                </Link>
+              }
               onRetry={() => {
                 void meeting.refetch()
               }}

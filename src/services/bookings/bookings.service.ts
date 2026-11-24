@@ -50,6 +50,7 @@ export async function getBookingById(
 export async function approveBooking(id: string): Promise<Booking> {
   const response = await apiClient.post<ApiSuccessResponse<Booking>>(
     `/specialist/bookings/${encodeURIComponent(id)}/approve`,
+    {},
   )
   return unwrapApiData(response)
 }

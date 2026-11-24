@@ -168,6 +168,7 @@ export function BookingsPage() {
             ) : calendar.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
+                  context="schedule"
                   error={calendar.error}
                   title="Could not load the schedule"
                   onRetry={() => {
@@ -254,6 +255,7 @@ export function BookingsPage() {
             ) : bookings.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
+                  context="bookings"
                   error={bookings.error}
                   title="Could not load bookings"
                   onRetry={() => {

@@ -183,6 +183,7 @@ export function ProfilePage() {
 
       {profile.isError ? (
         <ApiErrorNotice
+          context="profile"
           error={profile.error}
           title="Could not load your profile"
           onRetry={() => {
@@ -465,6 +466,7 @@ export function ProfilePage() {
                     {pricing.isError ? (
                       <div className="mt-3">
                         <ApiErrorNotice
+                          context="pricing"
                           error={pricing.error}
                           title="Could not load pricing"
                           onRetry={() => {

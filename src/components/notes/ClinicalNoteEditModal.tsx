@@ -251,6 +251,7 @@ export function ClinicalNoteEditModal({
         ) : note.isError ? (
           <div className="px-5 py-4">
             <ApiErrorNotice
+              context="clinicalNote"
               error={note.error}
               title="Could not load this note"
               onRetry={() => {

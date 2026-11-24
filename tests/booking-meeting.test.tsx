@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { BookingMeetingPage } from '../src/pages/BookingMeetingPage'
+import { ApiError } from '../src/lib/api-error'
 import { ROUTES, bookingMeetingPath } from '../src/router/routes'
 import type { MeetingInfo } from '../src/types/booking.types'
 
@@ -259,6 +260,37 @@ describe('BookingMeetingPage', () => {
     expect(screen.getByText('Could not load meeting room')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(mockRefetchMeeting).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a clean unavailable card with Back to bookings when meeting access is rejected', () => {
+    mockUseBookingMeeting.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError(
+        'This patient does not have an active or recently completed appointment with you.',
+        403,
+        'NO_ELIGIBLE_APPOINTMENT',
+      ),
+      refetch: mockRefetchMeeting,
+    })
+
+    renderMeetingPage()
+
+    expect(
+      screen.getByText('Meeting room is not available'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'This session is not active right now, has already ended, or is no longer confirmed.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Try again/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole('link', { name: /Back to bookings/i }).length,
+    ).toBeGreaterThan(0)
   })
 
   it('shows a left-meeting state when Jitsi closes and supports rejoining', () => {

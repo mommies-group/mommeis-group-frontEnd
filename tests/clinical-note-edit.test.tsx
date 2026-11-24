@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { PatientRecordPage } from '../src/pages/PatientRecordPage'
+import { ApiError } from '../src/lib/api-error'
 
 const mockUpdateNote = jest.fn()
 const mockDeleteNote = jest.fn()
 const mockRefetchNotes = jest.fn()
+const mockUseClinicalNote = jest.fn()
 
 const savedNote = {
   id: 'note-1',
@@ -77,12 +79,7 @@ jest.mock('../src/hooks/queries/clinical-notes/clinical-notes.queries', () => ({
     isError: false,
     refetch: mockRefetchNotes,
   }),
-  useClinicalNote: () => ({
-    data: savedNote,
-    isLoading: false,
-    isError: false,
-    refetch: jest.fn(),
-  }),
+  useClinicalNote: (noteId: string | null) => mockUseClinicalNote(noteId),
 }))
 
 jest.mock(
@@ -163,6 +160,13 @@ function openNotesDialog() {
 describe('clinical note edit and delete', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockUseClinicalNote.mockReturnValue({
+      data: savedNote,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    })
   })
 
   it('opens a prefilled popup and updates the note through PUT', () => {
@@ -211,5 +215,43 @@ describe('clinical note edit and delete', () => {
       { noteId: 'note-1' },
       expect.anything(),
     )
+  })
+
+  it('shows a centered empty-state card when a linked note no longer exists', () => {
+    mockUseClinicalNote.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError(
+        'The requested information could not be found.',
+        404,
+        'NOT_FOUND',
+      ),
+      refetch: jest.fn(),
+    })
+
+    render(
+      <MemoryRouter
+        initialEntries={['/patients/record?noteId=deleted-note#clinical-notes']}
+      >
+        <PatientRecordPage />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByText('This clinical note is no longer available'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Back to dashboard' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'My patients' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('Could not open this clinical note'),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Try again' }),
+    ).not.toBeInTheDocument()
   })
 })

@@ -153,6 +153,7 @@ export function TreatmentPlansPage() {
         ) : plans.isError ? (
           <div className="p-5">
             <ApiErrorNotice
+              context="treatmentPlans"
               error={plans.error}
               title="Could not load treatment plans"
               onRetry={() => {

@@ -16,6 +16,7 @@ import {
   useApproveBooking,
   useRejectBooking,
 } from '../hooks/mutations/bookings/bookings.mutations'
+import { useClinicalNoteChildMap } from '../hooks/queries/clinical-notes/clinical-notes.queries'
 import { useDashboardSummary } from '../hooks/queries/dashboard/dashboard.queries'
 import {
   useBookingById,
@@ -25,7 +26,11 @@ import { usePagination } from '../hooks/use-pagination'
 import { formatDateTime, formatScheduledDateTime } from '../lib/format'
 import { getActionErrorMessage } from '../lib/api-error'
 import { notifyError, notifySuccess } from '../lib/toast'
-import { ROUTES } from '../router/routes'
+import {
+  ROUTES,
+  patientNoteRecordPath,
+  patientRecordPath,
+} from '../router/routes'
 import type { Booking } from '../types/booking.types'
 
 type SummaryCardProps = {
@@ -97,16 +102,10 @@ export function DashboardPage() {
     pendingBookings.data?.find((booking) => booking.id === reviewBookingId) ??
     linkedReviewBooking.data ??
     null
-  const upcomingPager = usePagination(
-    data?.upcomingAppointments ?? [],
-    5,
-    'dashboard-upcoming',
-  )
-  const activityPager = usePagination(
-    data?.recentActivities ?? [],
-    5,
-    'dashboard-activity',
-  )
+  const noteIdsToResolve = (data?.recentActivities ?? [])
+    .filter((activity) => activity.type === 'NOTE' && !activity.childId)
+    .map((activity) => activity.id)
+  const noteChildMap = useClinicalNoteChildMap(noteIdsToResolve)
   const pendingPager = usePagination(
     pendingBookings.data ?? [],
     5,
@@ -175,6 +174,7 @@ export function DashboardPage() {
 
       {summary.isError ? (
         <ApiErrorNotice
+          context="dashboard"
           error={summary.error}
           title="Could not load your dashboard"
           onRetry={() => {
@@ -281,7 +281,7 @@ export function DashboardPage() {
                 </div>
               ) : data && data.upcomingAppointments.length > 0 ? (
                 <div className="divide-y divide-slate-200">
-                  {upcomingPager.visibleItems.map((appointment) => (
+                  {data.upcomingAppointments.map((appointment) => (
                     <button
                       type="button"
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
@@ -315,31 +315,10 @@ export function DashboardPage() {
                 </div>
               )}
             </CardBody>
-            <Pagination
-              compact
-              label="Upcoming appointments"
-              onPageChange={upcomingPager.setPage}
-              page={upcomingPager.page}
-              rangeEnd={upcomingPager.rangeEnd}
-              rangeStart={upcomingPager.rangeStart}
-              total={upcomingPager.total}
-              totalPages={upcomingPager.totalPages}
-            />
           </Card>
 
           <Card>
-            <CardHeader
-              title="Recent activity"
-              action={
-                <Link
-                  className={buttonStyles({ variant: 'ghost', size: 'sm' })}
-                  to={ROUTES.activities}
-                >
-                  Activities
-                  <Icon name="arrow-right" size={12} />
-                </Link>
-              }
-            />
+            <CardHeader title="Recent notes & activities" />
             <CardBody flush>
               {summary.isLoading ? (
                 <div className="grid gap-2 p-4">
@@ -349,47 +328,73 @@ export function DashboardPage() {
                 </div>
               ) : data && data.recentActivities.length > 0 ? (
                 <div className="divide-y divide-slate-200">
-                  {activityPager.visibleItems.map((activity) => (
-                    <div
-                      className="flex items-center gap-3 px-4 py-2.5"
-                      key={`${activity.type}-${activity.id}`}
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                  {data.recentActivities.map((activity) => {
+                    const resolvedChildId =
+                      activity.type === 'NOTE'
+                        ? (activity.childId ?? noteChildMap[activity.id] ?? null)
+                        : null
+                    const targetPath =
+                      activity.type === 'ACTIVITY'
+                        ? ROUTES.activities
+                        : resolvedChildId
+                          ? `${patientRecordPath(resolvedChildId)}#clinical-notes`
+                          : patientNoteRecordPath(activity.id)
+
+                    return (
+                      <Link
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                        to={targetPath}
+                        key={`${activity.type}-${activity.id}`}
+                      >
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                            activity.type === 'NOTE'
+                              ? 'bg-teal-50 text-teal-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <Icon
+                            name={
+                              activity.type === 'NOTE' ? 'notes' : 'activity'
+                            }
+                            size={14}
+                          />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-slate-800">
+                            {activity.title}
+                          </p>
+                          <p className="mt-0.5 truncate text-[12px] text-slate-500">
+                            {activity.type === 'NOTE'
+                              ? 'Clinical note'
+                              : 'Activity'}{' '}
+                            · {formatDateTime(activity.createdAt)}
+                          </p>
+                        </div>
+                        <Badge
+                          tone={activity.type === 'NOTE' ? 'info' : 'neutral'}
+                        >
+                          {activity.type === 'NOTE' ? 'Note' : 'Activity'}
+                        </Badge>
                         <Icon
-                          name={activity.type === 'NOTE' ? 'notes' : 'activity'}
+                          name="chevron-right"
                           size={14}
+                          className="shrink-0 text-slate-400"
                         />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-slate-800">
-                          {activity.title}
-                        </p>
-                        <p className="mt-0.5 truncate text-[12px] text-slate-500">
-                          {activity.type === 'NOTE'
-                            ? 'Clinical note'
-                            : 'Activity'}{' '}
-                          · {formatDateTime(activity.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="p-4">
-                  <EmptyState compact icon="activity" title="No recent activity" />
+                  <EmptyState
+                    compact
+                    icon="activity"
+                    title="No recent notes or activities"
+                  />
                 </div>
               )}
             </CardBody>
-            <Pagination
-              compact
-              label="Recent activity"
-              onPageChange={activityPager.setPage}
-              page={activityPager.page}
-              rangeEnd={activityPager.rangeEnd}
-              rangeStart={activityPager.rangeStart}
-              total={activityPager.total}
-              totalPages={activityPager.totalPages}
-            />
           </Card>
         </div>
 
@@ -421,6 +426,7 @@ export function DashboardPage() {
             ) : pendingBookings.isError ? (
               <div className="p-4">
                 <ApiErrorNotice
+                  context="bookings"
                   error={pendingBookings.error}
                   title="Could not load requests"
                   onRetry={() => {

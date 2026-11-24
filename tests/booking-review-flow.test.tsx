@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { DashboardPage } from '../src/pages/DashboardPage'
 import { BookingsPage } from '../src/pages/BookingsPage'
 import { NAV_GROUPS, ROUTES, bookingReviewPath } from '../src/router/routes'
 import type { BookingStatus } from '../src/types/booking.types'
+import type {
+  DashboardRecentActivity,
+  DashboardUpcomingAppointment,
+} from '../src/types/dashboard.types'
 
 const mockBooking = {
   id: 'booking-1',
@@ -61,11 +65,17 @@ function bookingWithProposal() {
 const mockApproveBooking = jest.fn()
 const mockRejectBooking = jest.fn()
 const mockMarkNoShow = jest.fn()
+let mockUpcomingAppointments: DashboardUpcomingAppointment[] = []
+let mockRecentActivities: DashboardRecentActivity[] = []
+let mockNoteChildMap: Record<string, string> = {}
 
 beforeEach(() => {
   mockProposalStatus = null
   mockBookingStatus = 'PENDING'
   mockScheduledAt = null
+  mockUpcomingAppointments = []
+  mockRecentActivities = []
+  mockNoteChildMap = {}
 })
 
 jest.mock('../src/hooks/queries/dashboard/dashboard.queries', () => ({
@@ -74,8 +84,8 @@ jest.mock('../src/hooks/queries/dashboard/dashboard.queries', () => ({
       todaySessions: 0,
       pendingBookingRequests: 1,
       activePatients: 0,
-      upcomingAppointments: [],
-      recentActivities: [],
+      upcomingAppointments: mockUpcomingAppointments,
+      recentActivities: mockRecentActivities,
     },
     isLoading: false,
     isError: false,
@@ -129,6 +139,7 @@ jest.mock('../src/hooks/mutations/clinical-notes/clinical-notes.mutations', () =
 jest.mock('../src/hooks/queries/clinical-notes/clinical-notes.queries', () => ({
   useClinicalNotes: () => ({ data: [], isLoading: false, isError: false }),
   useClinicalNote: () => ({ data: null, isLoading: false, isError: false }),
+  useClinicalNoteChildMap: () => mockNoteChildMap,
 }))
 
 jest.mock(
@@ -286,6 +297,114 @@ describe('dashboard booking quick actions', () => {
       expect.anything(),
     )
   })
+
+  it('omits pagination on Upcoming and Recent notes & activities and opens patient notes or activities on click', () => {
+    mockUpcomingAppointments = [
+      {
+        id: 'booking-2',
+        status: 'CONFIRMED',
+        scheduledAt: '2026-12-02T10:00:00.000Z',
+        child: { id: 'child-1', firstName: 'Ava', lastName: 'Smith' },
+      },
+    ]
+    mockRecentActivities = [
+      {
+        id: 'note-1',
+        type: 'NOTE',
+        title: 'Speech articulation progress',
+        createdAt: '2026-11-24T10:00:00.000Z',
+      },
+      {
+        id: 'note-2',
+        type: 'NOTE',
+        title: 'Expressive vocabulary notes',
+        createdAt: '2026-11-24T09:00:00.000Z',
+      },
+      {
+        id: 'act-1',
+        type: 'ACTIVITY',
+        title: 'Daily reading practice',
+        createdAt: '2026-11-23T10:00:00.000Z',
+      },
+    ]
+    mockNoteChildMap = { 'note-1': 'child-1' }
+
+    function LocationProbe() {
+      const location = useLocation()
+      return (
+        <div data-testid="location-probe">
+          {location.pathname}
+          {location.search}
+          {location.hash}
+        </div>
+      )
+    }
+
+    render(
+      <MemoryRouter initialEntries={[ROUTES.dashboard]}>
+        <Routes>
+          <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+          <Route path={ROUTES.patientRecord} element={<LocationProbe />} />
+          <Route path={ROUTES.activities} element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: /Upcoming appointments/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Recent activity/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByText(/^Showing 1–1 of 1$/)).toHaveLength(1)
+
+    const recentHeading = screen.getByRole('heading', {
+      name: 'Recent notes & activities',
+    })
+    const recentCard = recentHeading.closest('section') as HTMLElement
+    expect(
+      within(recentCard).queryByRole('link', { name: /Activities/i }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('link', { name: /Speech articulation progress/i }),
+    )
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(
+      '/patients/record?childId=child-1#clinical-notes',
+    )
+
+    render(
+      <MemoryRouter initialEntries={[ROUTES.dashboard]}>
+        <Routes>
+          <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+          <Route path={ROUTES.patientRecord} element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('link', { name: /Expressive vocabulary notes/i }),
+    )
+    expect(screen.getAllByTestId('location-probe').at(-1)).toHaveTextContent(
+      '/patients/record?noteId=note-2#clinical-notes',
+    )
+
+    render(
+      <MemoryRouter initialEntries={[ROUTES.dashboard]}>
+        <Routes>
+          <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+          <Route path={ROUTES.activities} element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('link', { name: /Daily reading practice/i }),
+    )
+    expect(screen.getAllByTestId('location-probe').at(-1)).toHaveTextContent(
+      '/activities',
+    )
+  })
 })
 
 describe('booking review deep link', () => {
@@ -368,9 +487,9 @@ describe('review actions by booking status', () => {
     expectOnlyActions(['Approve', 'Reject', 'Propose time'])
   })
 
-  it('shows approve, reject and propose for reschedule pending', () => {
+  it('shows approve and reject (without propose time) for reschedule pending', () => {
     renderReview('RESCHEDULE_PENDING')
-    expectOnlyActions(['Approve', 'Reject', 'Propose time'])
+    expectOnlyActions(['Approve', 'Reject'])
   })
 
   it('shows complete, meeting and no show for confirmed', () => {
