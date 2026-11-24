@@ -19,6 +19,7 @@ import {
   usePricing,
   useProfile,
 } from '../hooks/queries/profile/profile.queries'
+import { getActionErrorMessage } from '../lib/api-error'
 import { notifyError, notifySuccess } from '../lib/toast'
 import { ROUTES } from '../router/routes'
 
@@ -107,7 +108,8 @@ export function ProfilePage() {
           })
           notifySuccess('Profile saved.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'profile.update')),
       },
     )
   }
@@ -153,7 +155,8 @@ export function ProfilePage() {
           })
           notifySuccess('Pricing saved.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'pricing.update')),
       },
     )
   }

@@ -23,6 +23,7 @@ import {
 } from '../hooks/queries/bookings/bookings.queries'
 import { usePagination } from '../hooks/use-pagination'
 import { formatDateTime, formatScheduledDateTime } from '../lib/format'
+import { getActionErrorMessage } from '../lib/api-error'
 import { notifyError, notifySuccess } from '../lib/toast'
 import { ROUTES } from '../router/routes'
 import type { Booking } from '../types/booking.types'
@@ -122,7 +123,8 @@ export function DashboardPage() {
       onSuccess: () => {
         notifySuccess('Booking approved.')
       },
-      onError: (error) => notifyError(error),
+      onError: (error) =>
+        notifyError(error, getActionErrorMessage(error, 'booking.approve')),
     })
   }
 
@@ -140,7 +142,8 @@ export function DashboardPage() {
           setRejectReason('')
           notifySuccess('Booking rejected.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'booking.reject')),
       },
     )
   }

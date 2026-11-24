@@ -173,6 +173,9 @@ describe('clinical note edit and delete', () => {
     const dialog = screen.getByRole('dialog', { name: 'Edit clinical note' })
     expect(within(dialog).getByLabelText('Note')).toHaveValue('Original note')
     expect(
+      within(dialog).queryByLabelText(/Recommendation/i),
+    ).not.toBeInTheDocument()
+    expect(
       within(dialog).getByLabelText('Note for Daily reading practice'),
     ).toHaveValue('Start slow')
     expect(within(dialog).getByLabelText('Select Picture naming')).not.toBeChecked()
@@ -187,7 +190,6 @@ describe('clinical note edit and delete', () => {
         noteId: 'note-1',
         payload: expect.objectContaining({
           content: 'Updated note',
-          recommendation: 'Original recommendation',
           bookingId: 'booking-1',
           specialistNotes: { 'act-1': 'Start slow' },
         }),

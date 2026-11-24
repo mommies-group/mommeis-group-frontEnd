@@ -17,6 +17,7 @@ import {
 } from '../hooks/mutations/activities/activity-catalog.mutations'
 import { useCatalogActivities } from '../hooks/queries/activities/activity-catalog.queries'
 import { usePagination } from '../hooks/use-pagination'
+import { getActionErrorMessage } from '../lib/api-error'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
   CatalogActivity,
@@ -223,7 +224,11 @@ export function ActivitiesPage() {
             resetForm()
             notifySuccess('Custom activity updated.')
           },
-          onError: (error) => notifyError(error),
+          onError: (error) =>
+            notifyError(
+              error,
+              getActionErrorMessage(error, 'activity.update'),
+            ),
         },
       )
       return
@@ -234,7 +239,8 @@ export function ActivitiesPage() {
         resetForm()
         notifySuccess('Custom activity created.')
       },
-      onError: (error) => notifyError(error),
+      onError: (error) =>
+        notifyError(error, getActionErrorMessage(error, 'activity.create')),
     })
   }
 
@@ -254,7 +260,10 @@ export function ActivitiesPage() {
       },
       onError: (error) => {
         setDeactivatingId(null)
-        notifyError(error)
+        notifyError(
+          error,
+          getActionErrorMessage(error, 'activity.deactivate'),
+        )
       },
     })
   }

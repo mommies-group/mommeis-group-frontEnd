@@ -17,6 +17,7 @@ import {
   useNoShowTreatmentSession,
   useSubmitTreatmentPlan,
 } from '../../hooks/mutations/treatment-plans/treatment-plans.mutations'
+import { getActionErrorMessage } from '../../lib/api-error'
 import { notifyError, notifySuccess } from '../../lib/toast'
 import { formatScheduledDateTime } from '../../lib/format'
 import type { TreatmentPlan } from '../../types/treatment-plan.types'
@@ -97,7 +98,8 @@ export function TreatmentPlanDetailModal({
   const handleSubmitPlan = () => {
     submitPlan.mutate(planId, {
       onSuccess: (updated) => notifySuccess(`Plan sent for approval: ${updated.title}`),
-      onError: (error) => notifyError(error),
+      onError: (error) =>
+        notifyError(error, getActionErrorMessage(error, 'treatmentPlan.submit')),
     })
   }
 
@@ -115,7 +117,11 @@ export function TreatmentPlanDetailModal({
           setCancelMode(false)
           setCancelReason('')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'treatmentPlan.cancel'),
+          ),
       },
     )
   }
@@ -128,7 +134,11 @@ export function TreatmentPlanDetailModal({
           notifySuccess('Session marked as completed.')
           setSelectedSessionId(null)
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'treatmentPlan.completeSession'),
+          ),
       },
     )
   }
@@ -141,7 +151,11 @@ export function TreatmentPlanDetailModal({
           notifySuccess('Session marked as no-show.')
           setSelectedSessionId(null)
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'treatmentPlan.noShowSession'),
+          ),
       },
     )
   }

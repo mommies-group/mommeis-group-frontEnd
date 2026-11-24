@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
+import { Spinner } from './components/ui/Spinner'
 import { useAuthToken } from './lib/auth-token'
 import { ActivitiesPage } from './pages/ActivitiesPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
@@ -16,6 +17,12 @@ import { TreatmentPlansPage } from './pages/TreatmentPlansPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { toasterOptions } from './lib/toast'
 import { ROUTES, getPageTitle } from './router/routes'
+
+const BookingMeetingPage = lazy(() =>
+  import('./pages/BookingMeetingPage').then((module) => ({
+    default: module.BookingMeetingPage,
+  })),
+)
 
 function DocumentTitleUpdater() {
   const location = useLocation()
@@ -67,6 +74,16 @@ function App() {
           <Route path={ROUTES.profile} element={<ProfilePage />} />
           <Route path={ROUTES.availability} element={<AvailabilityPage />} />
           <Route path={ROUTES.bookings} element={<BookingsPage />} />
+          <Route
+            path={ROUTES.bookingMeeting}
+            element={
+              <Suspense
+                fallback={<Spinner className="py-16" label="Loading meeting…" />}
+              >
+                <BookingMeetingPage />
+              </Suspense>
+            }
+          />
           <Route path={ROUTES.patients} element={<PatientsPage />} />
           <Route path={ROUTES.patientRecord} element={<PatientRecordPage />} />
           <Route path={ROUTES.activities} element={<ActivitiesPage />} />

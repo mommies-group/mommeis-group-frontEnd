@@ -13,6 +13,7 @@ import { useBookings } from '../../hooks/queries/bookings/bookings.queries'
 import { usePatients } from '../../hooks/queries/patients/patients.queries'
 import { usePagination } from '../../hooks/use-pagination'
 import { formatScheduledDateTime } from '../../lib/format'
+import { getActionErrorMessage } from '../../lib/api-error'
 import { notifyError, notifySuccess } from '../../lib/toast'
 
 type ClinicalNoteModalProps = {
@@ -39,7 +40,6 @@ export function ClinicalNoteModal({
   const completeBooking = useCompleteBooking()
 
   const [note, setNote] = useState('')
-  const [recommendation, setRecommendation] = useState('')
   const [selectedBookingId, setSelectedBookingId] = useState(bookingId ?? '')
   const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([])
   const [specialistNotes, setSpecialistNotes] = useState<
@@ -94,7 +94,6 @@ export function ClinicalNoteModal({
 
   const resetForm = () => {
     setNote('')
-    setRecommendation('')
     setSelectedBookingId('')
     setSelectedActivityIds([])
     setSpecialistNotes({})
@@ -134,7 +133,6 @@ export function ClinicalNoteModal({
 
     const payload = {
       content: note.trim(),
-      recommendation: recommendation.trim() || undefined,
       bookingId: selectedBookingId || undefined,
       activityIds: selectedActivityIds.length ? selectedActivityIds : undefined,
       specialistNotes: Object.keys(notesForActivities).length
@@ -152,11 +150,16 @@ export function ClinicalNoteModal({
               {
                 onSuccess: () =>
                   finish('Clinical note saved and booking completed.'),
-                onError: (error) => notifyError(error),
+                onError: (error) =>
+                  notifyError(
+                    error,
+                    getActionErrorMessage(error, 'booking.complete'),
+                  ),
               },
             )
           },
-          onError: (error) => notifyError(error),
+          onError: (error) =>
+            notifyError(error, getActionErrorMessage(error, 'note.create')),
         },
       )
       return
@@ -166,7 +169,8 @@ export function ClinicalNoteModal({
       { childId, payload },
       {
         onSuccess: () => finish('Clinical note saved.'),
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'note.create')),
       },
     )
   }
@@ -318,20 +322,6 @@ export function ClinicalNoteModal({
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Session observations and progress"
                 rows={6}
-              />
-            </Field>
-
-            <Field
-              label="Recommendation"
-              htmlFor="note-modal-recommendation"
-              optional
-            >
-              <Input
-                id="note-modal-recommendation"
-                value={recommendation}
-                disabled={isSaving}
-                onChange={(event) => setRecommendation(event.target.value)}
-                placeholder="Follow-up recommendation"
               />
             </Field>
           </div>

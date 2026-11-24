@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ClinicalNoteModal } from '../notes/ClinicalNoteModal'
 import { Icon } from '../icons/Icon'
 import { ApiErrorNotice } from '../ui/ApiErrorNotice'
@@ -11,12 +12,13 @@ import { Field, Input, Textarea } from '../ui/Field'
 import { useBookingById } from '../../hooks/queries/bookings/bookings.queries'
 import {
   useApproveBooking,
-  useMeetingInfo,
   useMarkNoShow,
   useProposeAlternativeTime,
   useRejectBooking,
 } from '../../hooks/mutations/bookings/bookings.mutations'
+import { getActionErrorMessage } from '../../lib/api-error'
 import { notifyError, notifySuccess } from '../../lib/toast'
+import { bookingMeetingPath } from '../../router/routes'
 import {
   formatDateTime,
   formatScheduledDateTime,
@@ -55,11 +57,11 @@ type BookingReviewPanelProps = {
 }
 
 export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
+  const navigate = useNavigate()
   const bookingDetail = useBookingById(booking?.id ?? null)
   const approveBooking = useApproveBooking()
   const rejectBooking = useRejectBooking()
   const proposeTime = useProposeAlternativeTime()
-  const meetingInfo = useMeetingInfo()
   const markNoShow = useMarkNoShow()
 
   const [decision, setDecision] = useState<Decision | null>(null)
@@ -160,7 +162,8 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         setDecision(null)
         notifySuccess('Booking approved.')
       },
-      onError: (error) => notifyError(error),
+      onError: (error) =>
+        notifyError(error, getActionErrorMessage(error, 'booking.approve')),
     })
   }
 
@@ -178,7 +181,8 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           setReason('')
           notifySuccess('Booking rejected.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'booking.reject')),
       },
     )
   }
@@ -212,7 +216,8 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           setProposalNote('')
           notifySuccess('Alternative time proposed.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'booking.propose')),
       },
     )
   }
@@ -223,21 +228,13 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         resetDecision()
         notifySuccess('Marked as no show.')
       },
-      onError: (error) => notifyError(error),
+      onError: (error) =>
+        notifyError(error, getActionErrorMessage(error, 'booking.noShow')),
     })
   }
 
   const handleMeeting = () => {
-    meetingInfo.mutate(current.id, {
-      onSuccess: (meeting) => {
-        if (!meeting.joinUrl) {
-          notifyError(null, 'Meeting link is not available.')
-          return
-        }
-        window.open(meeting.joinUrl, '_blank', 'noopener,noreferrer')
-      },
-      onError: (error) => notifyError(error),
-    })
+    navigate(bookingMeetingPath(current.id))
   }
 
   return (
@@ -423,8 +420,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               variant="soft"
               size="sm"
               onClick={handleMeeting}
-              disabled={meetingInfo.isPending || !isAppointmentTime}
-              aria-busy={meetingInfo.isPending}
+              disabled={!isAppointmentTime}
               title={
                 isAppointmentTime
                   ? undefined
@@ -432,7 +428,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               }
             >
               <Icon name="video" size={13} />
-              {meetingInfo.isPending ? 'Opening…' : 'Meeting'}
+              Meeting
             </Button>
           ) : null}
           {canMeet ? (

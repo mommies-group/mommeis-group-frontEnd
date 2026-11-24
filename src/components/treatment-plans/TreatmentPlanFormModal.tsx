@@ -12,6 +12,7 @@ import {
   useCreateTreatmentPlan,
   useUpdateTreatmentPlan,
 } from '../../hooks/mutations/treatment-plans/treatment-plans.mutations'
+import { getActionErrorMessage } from '../../lib/api-error'
 import { notifyError, notifySuccess } from '../../lib/toast'
 import { parseScheduledDate, toDateKey, toScheduledIso } from '../../lib/format'
 import type { TreatmentPlan } from '../../types/treatment-plan.types'
@@ -211,7 +212,11 @@ function PlanFields({
             onSaved?.(updated)
             onClose()
           },
-          onError: (error) => notifyError(error),
+          onError: (error) =>
+            notifyError(
+              error,
+              getActionErrorMessage(error, 'treatmentPlan.update'),
+            ),
         },
       )
       return
@@ -237,7 +242,11 @@ function PlanFields({
           onSaved?.(created)
           onClose()
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'treatmentPlan.create'),
+          ),
       },
     )
   }

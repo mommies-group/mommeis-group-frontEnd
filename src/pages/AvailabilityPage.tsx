@@ -15,6 +15,7 @@ import {
   useUpdateAvailabilitySlot,
 } from '../hooks/mutations/profile/profile.mutations'
 import { useAvailability } from '../hooks/queries/profile/profile.queries'
+import { getActionErrorMessage } from '../lib/api-error'
 import { formatClockTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import type {
@@ -294,7 +295,11 @@ export function AvailabilityPage() {
             cancelEditing()
             notifySuccess('Availability slot updated.')
           },
-          onError: (error) => notifyError(error),
+          onError: (error) =>
+            notifyError(
+              error,
+              getActionErrorMessage(error, 'availability.update'),
+            ),
         },
       )
       return
@@ -308,7 +313,11 @@ export function AvailabilityPage() {
           setStatus('ACTIVE')
           notifySuccess('Availability slot added.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'availability.create'),
+          ),
       },
     )
   }
@@ -326,7 +335,11 @@ export function AvailabilityPage() {
           }
           notifySuccess('Slot status updated.')
         },
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(
+            error,
+            getActionErrorMessage(error, 'availability.status'),
+          ),
       },
     )
   }
@@ -347,7 +360,10 @@ export function AvailabilityPage() {
       },
       onError: (error) => {
         setDeleteId(null)
-        notifyError(error)
+        notifyError(
+          error,
+          getActionErrorMessage(error, 'availability.delete'),
+        )
       },
     })
   }

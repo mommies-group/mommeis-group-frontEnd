@@ -70,8 +70,14 @@ apiClient.interceptors.response.use(
 
     const status = error.response?.status
     const code = normalizeCode(error)
+    const rawServerMessage = error.response?.data?.message
+    const serverMessage =
+      typeof rawServerMessage === 'string' && (!status || status < 500)
+        ? rawServerMessage.trim()
+        : ''
     const message =
       getCodeMessage(code) ??
+      (serverMessage || null) ??
       (status
         ? 'The request could not be completed. Please try again.'
         : getCodeMessage('NETWORK_ERROR')) ??

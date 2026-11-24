@@ -101,6 +101,7 @@ describe('patients notes entry', () => {
       screen.getByRole('dialog', { name: 'Clinical notes' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Saved notes')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Recommendation/i)).not.toBeInTheDocument()
     expect(screen.getAllByText(/Ava Smith/).length).toBeGreaterThan(0)
     expect(
       screen.getByLabelText('Select Daily reading practice'),

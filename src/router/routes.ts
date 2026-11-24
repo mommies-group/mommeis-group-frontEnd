@@ -6,6 +6,7 @@ export const ROUTES = {
   profile: '/profile',
   availability: '/availability',
   bookings: '/bookings',
+  bookingMeeting: '/bookings/:bookingId/meeting',
   patients: '/patients',
   patientRecord: '/patients/record',
   activities: '/activities',
@@ -77,12 +78,21 @@ const titles: Record<string, string> = {
   [ROUTES.privacy]: 'Privacy',
 }
 
+const BOOKING_MEETING_PATTERN = /^\/bookings\/[^/]+\/meeting$/
+
 export function getPageTitle(path: string): string {
+  if (BOOKING_MEETING_PATTERN.test(path)) {
+    return 'Session Meeting'
+  }
   return titles[path] ?? 'Page not found'
 }
 
 export function bookingReviewPath(bookingId: string): string {
   return `${ROUTES.bookings}?bookingId=${encodeURIComponent(bookingId)}`
+}
+
+export function bookingMeetingPath(bookingId: string): string {
+  return `/bookings/${encodeURIComponent(bookingId)}/meeting`
 }
 
 export function patientRecordPath(childId: string): string {
@@ -105,6 +115,12 @@ export function isNavActive(itemPath: string, currentPath: string): boolean {
     return (
       currentPath === ROUTES.patients ||
       currentPath === ROUTES.patientRecord
+    )
+  }
+  if (itemPath === ROUTES.bookings) {
+    return (
+      currentPath === ROUTES.bookings ||
+      BOOKING_MEETING_PATTERN.test(currentPath)
     )
   }
   return itemPath === currentPath

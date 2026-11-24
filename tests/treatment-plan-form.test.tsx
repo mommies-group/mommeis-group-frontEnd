@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { TreatmentPlanFormModal } from '../src/components/treatment-plans/TreatmentPlanFormModal'
+import { ApiError } from '../src/lib/api-error'
+import { notifyError } from '../src/lib/toast'
 
 const mockCreatePlan = jest.fn()
 const mockUpdatePlan = jest.fn()
@@ -174,5 +176,34 @@ describe('TreatmentPlanFormModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create draft plan' }))
 
     expect(mockCreatePlan).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a clear conflict error when another booking overlaps the selected session times', () => {
+    const onClose = jest.fn()
+
+    mockCreatePlan.mockImplementationOnce(
+      (_payload: unknown, options?: { onError?: (err: unknown) => void }) => {
+        options?.onError?.(
+          new ApiError('Slot already booked', 409, 'BOOKING_CONFLICT'),
+        )
+      },
+    )
+
+    render(
+      <TreatmentPlanFormModal
+        open
+        childId="child-1"
+        onClose={onClose}
+      />,
+    )
+
+    fillValidPlan()
+    fireEvent.click(screen.getByRole('button', { name: 'Create draft plan' }))
+
+    expect(notifyError).toHaveBeenCalledWith(
+      expect.any(ApiError),
+      'There is already another booking at one of the selected session times. Please choose a different time.',
+    )
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

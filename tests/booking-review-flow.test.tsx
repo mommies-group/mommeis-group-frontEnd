@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { DashboardPage } from '../src/pages/DashboardPage'
 import { BookingsPage } from '../src/pages/BookingsPage'
-import { NAV_GROUPS, bookingReviewPath } from '../src/router/routes'
+import { NAV_GROUPS, ROUTES, bookingReviewPath } from '../src/router/routes'
 import type { BookingStatus } from '../src/types/booking.types'
 
 const mockBooking = {
@@ -430,5 +430,26 @@ describe('review actions by booking status', () => {
     fireEvent.click(screen.getByRole('button', { name: 'No show' }))
 
     expect(mockMarkNoShow).toHaveBeenCalledWith('booking-1', expect.anything())
+  })
+
+  it('navigates to the in-app meeting page when clicking Meeting', () => {
+    mockBookingStatus = 'CONFIRMED'
+    mockScheduledAt = wallClockIsoFromNow(-60 * 1000)
+
+    render(
+      <MemoryRouter initialEntries={[bookingReviewPath('booking-1')]}>
+        <Routes>
+          <Route path={ROUTES.bookings} element={<BookingsPage />} />
+          <Route
+            path={ROUTES.bookingMeeting}
+            element={<div>Meeting route active</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Meeting' }))
+
+    expect(screen.getByText('Meeting route active')).toBeInTheDocument()
   })
 })

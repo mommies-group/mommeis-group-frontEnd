@@ -16,6 +16,8 @@ export const queryKeys = {
       [...queryKeys.bookings.lists(), status ?? 'all'] as const,
     details: () => [...queryKeys.bookings.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.bookings.details(), id] as const,
+    meeting: (id: string) =>
+      [...queryKeys.bookings.detail(id), 'meeting'] as const,
   },
   calendar: {
     all: ['calendar'] as const,

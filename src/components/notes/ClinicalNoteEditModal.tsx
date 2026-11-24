@@ -11,6 +11,7 @@ import { useCatalogActivities } from '../../hooks/queries/activities/activity-ca
 import { useBookings } from '../../hooks/queries/bookings/bookings.queries'
 import { useClinicalNote } from '../../hooks/queries/clinical-notes/clinical-notes.queries'
 import { formatScheduledDateTime } from '../../lib/format'
+import { getActionErrorMessage } from '../../lib/api-error'
 import { notifyError, notifySuccess } from '../../lib/toast'
 
 type ClinicalNoteEditModalProps = {
@@ -42,7 +43,6 @@ export function ClinicalNoteEditModal({
   const deleteNote = useDeleteClinicalNote()
 
   const [content, setContent] = useState('')
-  const [recommendation, setRecommendation] = useState('')
   const [selectedBookingId, setSelectedBookingId] = useState('')
   const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([])
   const [specialistNotes, setSpecialistNotes] = useState<
@@ -63,7 +63,6 @@ export function ClinicalNoteEditModal({
     const snapshots = note.data.activities ?? []
     initialActivityIds.current = snapshots.map((snapshot) => snapshot.activityId)
     setContent(note.data.content)
-    setRecommendation(note.data.recommendation ?? '')
     setSelectedBookingId(note.data.booking?.id ?? note.data.bookingId ?? '')
     setSelectedActivityIds(initialActivityIds.current)
     setSpecialistNotes(
@@ -144,7 +143,6 @@ export function ClinicalNoteEditModal({
 
   const finish = (message: string) => {
     setContent('')
-    setRecommendation('')
     setSelectedBookingId('')
     setSelectedActivityIds([])
     setSpecialistNotes({})
@@ -187,7 +185,6 @@ export function ClinicalNoteEditModal({
         noteId,
         payload: {
           content: content.trim(),
-          recommendation: recommendation.trim() || undefined,
           bookingId: selectedBookingId || undefined,
           addActivityIds: addActivityIds.length ? addActivityIds : undefined,
           removeActivityIds: removeActivityIds.length
@@ -200,7 +197,8 @@ export function ClinicalNoteEditModal({
       },
       {
         onSuccess: () => finish('Clinical note updated.'),
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'note.update')),
       },
     )
   }
@@ -211,7 +209,8 @@ export function ClinicalNoteEditModal({
       { noteId },
       {
         onSuccess: () => finish('Clinical note deleted.'),
-        onError: (error) => notifyError(error),
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'note.delete')),
       },
     )
   }
@@ -378,20 +377,6 @@ export function ClinicalNoteEditModal({
                     onChange={(event) => setContent(event.target.value)}
                     placeholder="Session observations and progress"
                     rows={6}
-                  />
-                </Field>
-
-                <Field
-                  label="Recommendation"
-                  htmlFor="note-edit-recommendation"
-                  optional
-                >
-                  <Input
-                    id="note-edit-recommendation"
-                    value={recommendation}
-                    disabled={isSaving}
-                    onChange={(event) => setRecommendation(event.target.value)}
-                    placeholder="Follow-up recommendation"
                   />
                 </Field>
               </div>

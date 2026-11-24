@@ -64,9 +64,12 @@ export type ProposeAlternativeTimeRequest = {
 }
 
 export type MeetingInfo = {
+  bookingId?: string
+  status?: BookingStatus
+  statusEnum?: BookingStatus[]
   domain: string
   roomName: string
-  jwt: string
+  jwt: string | null
   joinUrl: string
 }
 
