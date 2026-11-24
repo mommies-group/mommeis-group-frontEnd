@@ -41,6 +41,36 @@ export function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? 'Not provided' : dateFormatter.format(date)
 }
 
+const WALL_CLOCK_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?/
+
+export function parseScheduledDate(
+  value: string | null | undefined,
+): Date | null {
+  if (!value) {
+    return null
+  }
+
+  const match = WALL_CLOCK_DATETIME_RE.exec(value.trim())
+  if (match) {
+    const [, year, month, day, hours, minutes, seconds = '0', millis = '0'] =
+      match
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds),
+      Number(millis.slice(0, 3).padEnd(3, '0')),
+    )
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const fallback = new Date(value)
+  return Number.isNaN(fallback.getTime()) ? null : fallback
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return 'Not scheduled'
@@ -50,6 +80,13 @@ export function formatDateTime(value: string | null | undefined): string {
   return Number.isNaN(date.getTime())
     ? 'Not scheduled'
     : dateTimeFormatter.format(date)
+}
+
+export function formatScheduledDateTime(
+  value: string | null | undefined,
+): string {
+  const date = parseScheduledDate(value)
+  return date ? dateTimeFormatter.format(date) : 'Not scheduled'
 }
 
 export function formatTime(value: string | null | undefined): string {

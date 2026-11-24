@@ -20,7 +20,13 @@ import {
   useBookingById,
   useBookings,
 } from '../hooks/queries/bookings/bookings.queries'
-import { formatDateTime, monthRange, toDateKey } from '../lib/format'
+import {
+  formatDateTime,
+  formatScheduledDateTime,
+  monthRange,
+  parseScheduledDate,
+  toDateKey,
+} from '../lib/format'
 import { BOOKING_STATUSES, type BookingStatus } from '../types/booking.types'
 import { ROUTES } from '../router/routes'
 
@@ -48,14 +54,16 @@ export function BookingsPage() {
   const allEvents = useMemo(() => calendar.data?.events ?? [], [calendar.data])
   const sortedEvents = useMemo(() => {
     const filtered = selectedDateKey
-      ? allEvents.filter(
-          (event) => toDateKey(new Date(event.scheduledAt)) === selectedDateKey,
-        )
+      ? allEvents.filter((event) => {
+          const parsed = parseScheduledDate(event.scheduledAt)
+          return parsed ? toDateKey(parsed) === selectedDateKey : false
+        })
       : allEvents
 
     return [...filtered].sort(
       (a, b) =>
-        new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+        (parseScheduledDate(a.scheduledAt)?.getTime() ?? 0) -
+        (parseScheduledDate(b.scheduledAt)?.getTime() ?? 0),
     )
   }, [allEvents, selectedDateKey])
 
@@ -188,7 +196,7 @@ export function BookingsPage() {
                         {event.child.firstName} {event.child.lastName}
                       </p>
                       <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                        {formatDateTime(event.scheduledAt)}
+                        {formatScheduledDateTime(event.scheduledAt)}
                       </p>
                     </div>
                     <BookingStatusBadge status={event.status} />
@@ -288,9 +296,9 @@ export function BookingsPage() {
                           <BookingStatusBadge status={booking.status} />
                         </div>
                         <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                          {formatDateTime(
-                            booking.scheduledAt ?? booking.requestedAt,
-                          )}{' '}
+                          {booking.scheduledAt
+                            ? formatScheduledDateTime(booking.scheduledAt)
+                            : formatDateTime(booking.requestedAt)}{' '}
                           · {booking.parent.fullName}
                         </p>
                         {booking.reason ? (

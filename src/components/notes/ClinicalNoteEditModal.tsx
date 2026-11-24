@@ -10,7 +10,7 @@ import { useDeleteClinicalNote, useUpdateClinicalNote } from '../../hooks/mutati
 import { useCatalogActivities } from '../../hooks/queries/activities/activity-catalog.queries'
 import { useBookings } from '../../hooks/queries/bookings/bookings.queries'
 import { useClinicalNote } from '../../hooks/queries/clinical-notes/clinical-notes.queries'
-import { formatDateTime } from '../../lib/format'
+import { formatScheduledDateTime } from '../../lib/format'
 import { notifyError, notifySuccess } from '../../lib/toast'
 
 type ClinicalNoteEditModalProps = {
@@ -310,7 +310,7 @@ export function ClinicalNoteEditModal({
                       <option value="">No appointment</option>
                       {appointmentOptions.map((booking) => (
                         <option value={booking.id} key={booking.id}>
-                          {formatDateTime(booking.scheduledAt)}
+                          {formatScheduledDateTime(booking.scheduledAt)}
                         </option>
                       ))}
                     </Select>

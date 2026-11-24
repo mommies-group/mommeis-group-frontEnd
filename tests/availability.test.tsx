@@ -56,11 +56,10 @@ function slot(
   }
 }
 
-function fillTimes(start: string, end: string) {
+function fillStart(start: string) {
   fireEvent.change(screen.getByLabelText('Start'), {
     target: { value: start },
   })
-  fireEvent.change(screen.getByLabelText('End'), { target: { value: end } })
 }
 
 function submitForm(buttonName = 'Add slot') {
@@ -79,20 +78,38 @@ describe('availability slots', () => {
     mockSlots = []
   })
 
-  it('starts with empty time fields and requires both times', () => {
+  it('starts with empty time fields and requires a start time', () => {
     render(<AvailabilityPage />)
 
     expect(screen.getByLabelText('Start')).toHaveValue('')
     expect(screen.getByLabelText('End')).toHaveValue('')
+    expect(screen.getByLabelText('End')).toBeDisabled()
 
-    fillTimes('09:00', '')
+    submitForm()
 
+    expect(mockNotifyError).toHaveBeenCalledWith(
+      null,
+      'Choose a start time.',
+    )
+    expect(mockCreateSlot).not.toHaveBeenCalled()
+  })
+
+  it('automatically sets end time to 30 minutes after start and rejects times past 11:29 PM', () => {
+    render(<AvailabilityPage />)
+
+    fillStart('13:00')
+    expect(screen.getByLabelText('End')).toHaveValue('13:30')
+
+    fillStart('14:00')
+    expect(screen.getByLabelText('End')).toHaveValue('14:30')
+
+    fillStart('23:30')
     expect(screen.getByLabelText('End')).toHaveValue('')
     submitForm()
 
     expect(mockNotifyError).toHaveBeenCalledWith(
       null,
-      'Choose a start and end time.',
+      'Start time must be 11:29 PM or earlier for a 30-minute slot.',
     )
     expect(mockCreateSlot).not.toHaveBeenCalled()
   })
@@ -101,7 +118,7 @@ describe('availability slots', () => {
     mockSlots = [slot(1, '09:00', '10:00')]
     render(<AvailabilityPage />)
 
-    fillTimes('09:30', '10:00')
+    fillStart('09:30')
     submitForm()
 
     expect(mockNotifyError).toHaveBeenCalledWith(
@@ -111,11 +128,19 @@ describe('availability slots', () => {
     expect(mockCreateSlot).not.toHaveBeenCalled()
   })
 
-  it('allows a time that starts exactly when an existing slot ends', () => {
+  it('allows a time that starts exactly when an existing slot ends and resets inputs after creation', () => {
+    mockCreateSlot.mockImplementation(
+      (_payload: unknown, options?: { onSuccess?: () => void }) => {
+        options?.onSuccess?.()
+      },
+    )
     mockSlots = [slot(1, '09:00', '10:00')]
     render(<AvailabilityPage />)
 
-    fillTimes('10:00', '11:00')
+    fillStart('10:00')
+    fireEvent.change(screen.getByLabelText('Status'), {
+      target: { value: 'INACTIVE' },
+    })
     submitForm()
 
     expect(mockNotifyError).not.toHaveBeenCalled()
@@ -123,11 +148,15 @@ describe('availability slots', () => {
       {
         dayOfWeek: 1,
         startTime: '10:00',
-        endTime: '11:00',
-        status: 'ACTIVE',
+        endTime: '10:30',
+        status: 'INACTIVE',
       },
       expect.anything(),
     )
+    expect(screen.getByLabelText('Start')).toHaveValue('')
+    expect(screen.getByLabelText('End')).toHaveValue('')
+    expect(screen.getByLabelText('Status')).toHaveValue('ACTIVE')
+    expect(mockNotifySuccess).toHaveBeenCalledWith('Availability slot added.')
   })
 
   it('shows saved and selected times with AM/PM on a 12-hour clock', () => {
@@ -136,10 +165,10 @@ describe('availability slots', () => {
 
     expect(screen.getByText(/9:00\s?AM\s*–\s*1:00\s?PM/)).toBeInTheDocument()
 
-    fillTimes('09:30', '10:30')
+    fillStart('09:30')
 
     expect(
-      screen.getByText(/Selected:\s*9:30\s?AM\s*–\s*10:30\s?AM/),
+      screen.getByText(/Selected:\s*9:30\s?AM\s*–\s*10:00\s?AM\s*\(30 min\)/),
     ).toBeInTheDocument()
   })
 
@@ -150,12 +179,16 @@ describe('availability slots', () => {
     fireEvent.change(screen.getByLabelText('Day'), {
       target: { value: '2' },
     })
-    fillTimes('09:00', '10:00')
+    fillStart('09:00')
     submitForm()
 
     expect(mockNotifyError).not.toHaveBeenCalled()
     expect(mockCreateSlot).toHaveBeenCalledWith(
-      expect.objectContaining({ dayOfWeek: 2 }),
+      expect.objectContaining({
+        dayOfWeek: 2,
+        startTime: '09:00',
+        endTime: '09:30',
+      }),
       expect.anything(),
     )
   })
@@ -168,10 +201,12 @@ describe('availability slots', () => {
 
     expect(screen.getByText('Edit slot')).toBeInTheDocument()
     expect(screen.getByLabelText('Start')).toHaveValue('09:00')
-    expect(screen.getByLabelText('End')).toHaveValue('10:00')
+    expect(screen.getByLabelText('End')).toHaveValue('09:30')
+    expect(screen.getByLabelText('End')).toBeDisabled()
     expect(screen.getByLabelText('Day')).toBeDisabled()
 
-    fillTimes('09:30', '10:30')
+    fillStart('09:30')
+    expect(screen.getByLabelText('End')).toHaveValue('10:00')
     fireEvent.change(screen.getByLabelText('Status'), {
       target: { value: 'INACTIVE' },
     })
@@ -183,7 +218,7 @@ describe('availability slots', () => {
         id: 'slot-1-09:00',
         payload: {
           startTime: '09:30',
-          endTime: '10:30',
+          endTime: '10:00',
           status: 'INACTIVE',
         },
       },
@@ -197,7 +232,7 @@ describe('availability slots', () => {
     render(<AvailabilityPage />)
 
     fireEvent.click(screen.getByRole('button', { name: /Edit Monday/ }))
-    fillTimes('09:30', '10:00')
+    fillStart('09:30')
     submitForm('Save changes')
 
     expect(mockNotifyError).not.toHaveBeenCalled()
@@ -211,7 +246,7 @@ describe('availability slots', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /Edit Monday.*11:00/ }),
     )
-    fillTimes('09:30', '10:30')
+    fillStart('09:30')
     submitForm('Save changes')
 
     expect(mockNotifyError).toHaveBeenCalledWith(

@@ -1,7 +1,7 @@
 import { Icon } from '../icons/Icon'
 import { calendarDotClasses } from './bookingStatusMeta'
 import type { CalendarEvent } from '../../types/booking.types'
-import { toDateKey } from '../../lib/format'
+import { parseScheduledDate, toDateKey } from '../../lib/format'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -70,7 +70,11 @@ export function MonthCalendar({
 
   const eventsByDate = new Map<string, CalendarEvent[]>()
   events.forEach((event) => {
-    const key = toDateKey(new Date(event.scheduledAt))
+    const parsed = parseScheduledDate(event.scheduledAt)
+    if (!parsed) {
+      return
+    }
+    const key = toDateKey(parsed)
     const dayEvents = eventsByDate.get(key)
 
     if (dayEvents) {

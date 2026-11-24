@@ -17,10 +17,18 @@ import {
   useRejectBooking,
 } from '../../hooks/mutations/bookings/bookings.mutations'
 import { notifyError, notifySuccess } from '../../lib/toast'
-import { formatDateTime, toDateKey, toDateTimeIso } from '../../lib/format'
+import {
+  formatDateTime,
+  formatScheduledDateTime,
+  parseScheduledDate,
+  toDateKey,
+  toDateTimeIso,
+} from '../../lib/format'
 import type { Booking, ProposalStatus } from '../../types/booking.types'
 import { BookingStatusBadge } from './bookingStatus'
 import { bookingStatusLabels } from './bookingStatusMeta'
+
+const MAX_TIMEOUT_MS = 2_147_483_647
 
 type Decision = 'approve' | 'reject' | 'propose'
 
@@ -65,25 +73,28 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   const current = bookingDetail.data ?? booking
   const [now, setNow] = useState(() => Date.now())
   const scheduledAtMs = current?.scheduledAt
-    ? new Date(current.scheduledAt).getTime()
+    ? (parseScheduledDate(current.scheduledAt)?.getTime() ?? null)
     : null
 
   useEffect(() => {
-    if (
-      !scheduledAtMs ||
-      !Number.isFinite(scheduledAtMs) ||
-      scheduledAtMs <= Date.now()
-    ) {
+    if (!scheduledAtMs || !Number.isFinite(scheduledAtMs)) {
       return
     }
 
-    const timer = window.setTimeout(
-      () => setNow(Date.now()),
-      scheduledAtMs - Date.now() + 1000,
-    )
+    const remaining = scheduledAtMs - Date.now()
+    if (remaining <= 0) {
+      if (now < scheduledAtMs) {
+        const timer = window.setTimeout(() => setNow(Date.now()), 0)
+        return () => window.clearTimeout(timer)
+      }
+      return
+    }
+
+    const delay = Math.min(remaining + 1000, MAX_TIMEOUT_MS)
+    const timer = window.setTimeout(() => setNow(Date.now()), delay)
 
     return () => window.clearTimeout(timer)
-  }, [scheduledAtMs])
+  }, [scheduledAtMs, now])
 
   const isAppointmentTime =
     scheduledAtMs !== null &&
@@ -267,7 +278,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
                 Scheduled
               </dt>
               <dd className="mt-0.5 text-[11px] font-medium text-slate-700">
-                {formatDateTime(current.scheduledAt)}
+                {formatScheduledDateTime(current.scheduledAt)}
               </dd>
             </div>
             {current.reason ? (
@@ -336,7 +347,7 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
         {canComplete && !isAppointmentTime && current.scheduledAt ? (
           <p className="mt-3 text-[10px] font-medium text-slate-500">
             Actions unlock at the scheduled time ·{' '}
-            {formatDateTime(current.scheduledAt)}
+            {formatScheduledDateTime(current.scheduledAt)}
           </p>
         ) : null}
 

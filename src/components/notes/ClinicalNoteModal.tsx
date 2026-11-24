@@ -15,7 +15,7 @@ import { useBookings } from '../../hooks/queries/bookings/bookings.queries'
 import { useClinicalNotes } from '../../hooks/queries/clinical-notes/clinical-notes.queries'
 import { usePatients } from '../../hooks/queries/patients/patients.queries'
 import { usePagination } from '../../hooks/use-pagination'
-import { formatDateTime } from '../../lib/format'
+import { formatDateTime, formatScheduledDateTime } from '../../lib/format'
 import { notifyError, notifySuccess } from '../../lib/toast'
 
 type ClinicalNoteModalProps = {
@@ -264,7 +264,7 @@ export function ClinicalNoteModal({
                   <option value="">No appointment</option>
                   {appointmentOptions.map((booking) => (
                     <option value={booking.id} key={booking.id}>
-                      {formatDateTime(booking.scheduledAt)}
+                      {formatScheduledDateTime(booking.scheduledAt)}
                     </option>
                   ))}
                 </Select>

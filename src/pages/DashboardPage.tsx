@@ -22,7 +22,7 @@ import {
   usePendingBookings,
 } from '../hooks/queries/bookings/bookings.queries'
 import { usePagination } from '../hooks/use-pagination'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, formatScheduledDateTime } from '../lib/format'
 import { notifyError, notifySuccess } from '../lib/toast'
 import { ROUTES } from '../router/routes'
 import type { Booking } from '../types/booking.types'
@@ -235,7 +235,7 @@ export function DashboardPage() {
             summary.isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : nextAppointment ? (
-              <span className="text-base">{formatDateTime(nextAppointment.scheduledAt)}</span>
+              <span className="text-base">{formatScheduledDateTime(nextAppointment.scheduledAt)}</span>
             ) : (
               <span className="text-base">None</span>
             )
@@ -295,7 +295,7 @@ export function DashboardPage() {
                           {appointment.child.lastName}
                         </p>
                         <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                          {formatDateTime(appointment.scheduledAt)}
+                          {formatScheduledDateTime(appointment.scheduledAt)}
                         </p>
                       </div>
                       <BookingStatusBadge status={appointment.status} />

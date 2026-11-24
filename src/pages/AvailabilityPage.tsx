@@ -53,9 +53,27 @@ const STATUS_LABELS: Record<AvailabilityStatus, string> = {
   INACTIVE: 'Inactive',
 }
 
+const SLOT_DURATION_MINUTES = 30
+const MINUTES_PER_DAY = 24 * 60
+
 function toMinutes(value: string): number {
   const [hours, minutes] = value.split(':').map(Number)
   return hours * 60 + minutes
+}
+
+function addMinutes(value: string, deltaMinutes: number): string {
+  if (!value) {
+    return ''
+  }
+
+  const total = toMinutes(value) + deltaMinutes
+  if (!Number.isFinite(total) || total < 0 || total >= MINUTES_PER_DAY) {
+    return ''
+  }
+
+  const hours = Math.floor(total / 60)
+  const minutes = total % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
 function formatRange(start: string, end: string): string {
@@ -182,12 +200,10 @@ export function AvailabilityPage() {
 
   const [day, setDay] = useState<DayOfWeek>(1)
   const [start, setStart] = useState('')
-  const [end, setEnd] = useState('')
   const [status, setStatus] = useState<AvailabilityStatus>('ACTIVE')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editStart, setEditStart] = useState('')
-  const [editEnd, setEditEnd] = useState('')
   const [editStatus, setEditStatus] = useState<AvailabilityStatus>('ACTIVE')
 
   const editingSlot =
@@ -195,7 +211,7 @@ export function AvailabilityPage() {
   const isEditing = Boolean(editingSlot)
   const activeDay = editingSlot?.dayOfWeek ?? day
   const activeStart = editingSlot ? editStart : start
-  const activeEnd = editingSlot ? editEnd : end
+  const activeEnd = addMinutes(activeStart, SLOT_DURATION_MINUTES)
   const activeStatus = editingSlot ? editStatus : status
   const isBusy =
     createSlot.isPending || updateSlot.isPending || deleteSlot.isPending
@@ -222,14 +238,12 @@ export function AvailabilityPage() {
     updateSlot.reset()
     setEditingId(slot.id)
     setEditStart(slot.startTime)
-    setEditEnd(slot.endTime)
     setEditStatus(slotStatus(slot))
   }
 
   const cancelEditing = () => {
     setEditingId(null)
     setEditStart('')
-    setEditEnd('')
     setEditStatus('ACTIVE')
     updateSlot.reset()
   }
@@ -239,13 +253,16 @@ export function AvailabilityPage() {
     createSlot.reset()
     updateSlot.reset()
 
-    if (!activeStart || !activeEnd) {
-      notifyError(null, 'Choose a start and end time.')
+    if (!activeStart) {
+      notifyError(null, 'Choose a start time.')
       return
     }
 
-    if (toMinutes(activeEnd) <= toMinutes(activeStart)) {
-      notifyError(null, 'End time must be after start time.')
+    if (!activeEnd) {
+      notifyError(
+        null,
+        'Start time must be 11:29 PM or earlier for a 30-minute slot.',
+      )
       return
     }
 
@@ -284,9 +301,13 @@ export function AvailabilityPage() {
     }
 
     createSlot.mutate(
-      { dayOfWeek: day, startTime: start, endTime: end, status },
+      { dayOfWeek: day, startTime: activeStart, endTime: activeEnd, status },
       {
-        onSuccess: () => notifySuccess('Availability slot added.'),
+        onSuccess: () => {
+          setStart('')
+          setStatus('ACTIVE')
+          notifySuccess('Availability slot added.')
+        },
         onError: (error) => notifyError(error),
       },
     )
@@ -453,20 +474,24 @@ export function AvailabilityPage() {
                       type="time"
                       lang="en-US"
                       value={activeEnd}
-                      disabled={isBusy}
-                      onChange={(event) =>
-                        isEditing
-                          ? setEditEnd(event.target.value)
-                          : setEnd(event.target.value)
-                      }
+                      readOnly
+                      disabled
                     />
                   </Field>
                 </div>
                 {activeStart && activeEnd ? (
                   <p className="-mt-2 text-[11px] font-medium text-slate-500">
-                    Selected: {formatRange(activeStart, activeEnd)}
+                    Selected: {formatRange(activeStart, activeEnd)} (30 min)
                   </p>
-                ) : null}
+                ) : activeStart ? (
+                  <p className="-mt-2 text-[11px] font-medium text-rose-600">
+                    Start time must be 11:29 PM or earlier for a 30-minute slot.
+                  </p>
+                ) : (
+                  <p className="-mt-2 text-[11px] font-medium text-slate-500">
+                    End time is set automatically (+30 min).
+                  </p>
+                )}
                 <Field label="Status" htmlFor="availability-status">
                   <Select
                     id="availability-status"

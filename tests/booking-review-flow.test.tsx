@@ -386,8 +386,14 @@ describe('review actions by booking status', () => {
     },
   )
 
+  function wallClockIsoFromNow(offsetMs: number): string {
+    const date = new Date(Date.now() + offsetMs)
+    const pad = (value: number) => String(value).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.000Z`
+  }
+
   it('keeps complete and meeting disabled until the scheduled time', () => {
-    mockScheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    mockScheduledAt = wallClockIsoFromNow(60 * 60 * 1000)
     renderReview('CONFIRMED')
 
     expect(screen.getByRole('button', { name: 'Complete' })).toBeDisabled()
@@ -397,7 +403,7 @@ describe('review actions by booking status', () => {
   })
 
   it('enables complete and meeting once the scheduled time is reached', () => {
-    mockScheduledAt = new Date(Date.now() - 60 * 1000).toISOString()
+    mockScheduledAt = wallClockIsoFromNow(-60 * 1000)
     renderReview('CONFIRMED')
 
     expect(screen.getByRole('button', { name: 'Complete' })).toBeEnabled()
@@ -407,7 +413,7 @@ describe('review actions by booking status', () => {
   })
 
   it('opens the notes dialog when completing a confirmed booking', () => {
-    mockScheduledAt = new Date(Date.now() - 60 * 1000).toISOString()
+    mockScheduledAt = wallClockIsoFromNow(-60 * 1000)
     renderReview('CONFIRMED')
 
     fireEvent.click(screen.getByRole('button', { name: 'Complete' }))
@@ -418,7 +424,7 @@ describe('review actions by booking status', () => {
   })
 
   it('marks a confirmed booking as no show', () => {
-    mockScheduledAt = new Date(Date.now() - 60 * 1000).toISOString()
+    mockScheduledAt = wallClockIsoFromNow(-60 * 1000)
     renderReview('CONFIRMED')
 
     fireEvent.click(screen.getByRole('button', { name: 'No show' }))
