@@ -197,18 +197,15 @@ export function TreatmentPlansPage() {
                 </article>
               ))}
             </div>
-            <div className="ps-8 pb-5">
-              <Pagination
-                label="Treatment plans"
-                onPageChange={setPage}
-                page={page}
-                rangeEnd={rangeEnd}
-                rangeStart={rangeStart}
-                total={total}
-                totalPages={totalPages}
-                flush
-              />
-            </div>
+            <Pagination
+              label="Treatment plans"
+              onPageChange={setPage}
+              page={currentPage}
+              rangeEnd={rangeEnd}
+              rangeStart={rangeStart}
+              total={total}
+              totalPages={totalPages}
+            />
           </>
         ) : (
           <div className="p-5">

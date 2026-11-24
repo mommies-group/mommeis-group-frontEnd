@@ -69,7 +69,7 @@ export function BookingsPage() {
 
   const schedulePager = usePagination(
     sortedEvents,
-    5,
+    6,
     `${range.from}:${range.to}:${selectedDateKey ?? 'all'}`,
   )
   const bookingsPager = usePagination(
@@ -132,10 +132,10 @@ export function BookingsPage() {
         }
       />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <Card>
+      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <Card className="flex h-full flex-col">
           <CardHeader title="Schedule" />
-          <CardBody>
+          <CardBody className="flex-1">
             <MonthCalendar
               monthOffset={monthOffset}
               onMonthOffsetChange={handleMonthOffsetChange}
@@ -147,7 +147,7 @@ export function BookingsPage() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="flex h-full flex-col">
           <CardHeader
             title={selectedDateLabel ? `Sessions · ${selectedDateLabel}` : 'Sessions'}
             action={
@@ -162,7 +162,7 @@ export function BookingsPage() {
               ) : null
             }
           />
-          <CardBody flush>
+          <CardBody className="flex-1" flush>
             {calendar.isLoading ? (
               <Spinner className="py-10" label="Loading sessions…" />
             ) : calendar.isError ? (

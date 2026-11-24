@@ -120,24 +120,28 @@ export function PatientRecordPage() {
   const milestonesPager = usePagination(
     record.data?.milestones ?? [],
     5,
-    'record-milestones',
+    `${childId ?? ''}:record-milestones`,
   )
   const observationsPager = usePagination(
     record.data?.observations ?? [],
     5,
-    'record-observations',
+    `${childId ?? ''}:record-observations`,
   )
   const assessmentsPager = usePagination(
     record.data?.assessments ?? [],
     5,
-    'record-assessments',
+    `${childId ?? ''}:record-assessments`,
   )
   const triagePager = usePagination(
     record.data?.triageHistory ?? [],
     5,
-    'record-triage',
+    `${childId ?? ''}:record-triage`,
   )
-  const notesPager = usePagination(clinicalNotes.data ?? [], 5, 'record-notes')
+  const notesPager = usePagination(
+    clinicalNotes.data ?? [],
+    5,
+    `${childId ?? ''}:record-notes`,
+  )
   const accessError = record.isError && isAccessError(record.error)
 
   const pageTitle = record.data

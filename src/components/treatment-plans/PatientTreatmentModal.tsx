@@ -144,7 +144,7 @@ export function PatientTreatmentModal({
             ) : (
               <EmptyState
                 icon="file"
-                title="No treatment"
+                title="No treatment plans"
                 description="This patient has no treatment plans yet."
                 action={
                   <Link
@@ -164,7 +164,7 @@ export function PatientTreatmentModal({
             <Pagination
               label="Patient treatment plans"
               onPageChange={setPage}
-              page={page}
+              page={currentPage}
               rangeEnd={rangeEnd}
               rangeStart={rangeStart}
               total={total}

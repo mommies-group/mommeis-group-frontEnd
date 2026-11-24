@@ -14,6 +14,7 @@ import { Field, Input, Select, Textarea } from '../src/components/ui/Field'
 import { InlineNotice } from '../src/components/ui/InlineNotice'
 import { Logo } from '../src/components/ui/Logo'
 import { PageHeader } from '../src/components/ui/PageHeader'
+import { Pagination } from '../src/components/ui/Pagination'
 import { Skeleton } from '../src/components/ui/Skeleton'
 import { SourceBadge } from '../src/components/ui/SourceBadge'
 import { StatusRow } from '../src/components/ui/StatusRow'
@@ -317,5 +318,56 @@ describe('ErrorBoundary', () => {
     ).toBeInTheDocument()
 
     errorSpy.mockRestore()
+  })
+})
+
+describe('Pagination', () => {
+  it('renders numbered page pills consistently even in compact mode', () => {
+    const onPageChange = jest.fn()
+
+    render(
+      <Pagination
+        compact
+        label="Sessions"
+        onPageChange={onPageChange}
+        page={1}
+        rangeEnd={5}
+        rangeStart={1}
+        total={28}
+        totalPages={6}
+      />,
+    )
+
+    for (let pageNumber = 1; pageNumber <= 6; pageNumber += 1) {
+      expect(
+        screen.getByRole('button', { name: `Page ${pageNumber} (Sessions)` }),
+      ).toBeInTheDocument()
+    }
+
+    expect(
+      screen.getByRole('button', { name: 'Page 1 (Sessions)' }),
+    ).toHaveAttribute('aria-current', 'page')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 4 (Sessions)' }))
+    expect(onPageChange).toHaveBeenCalledWith(4)
+  })
+
+  it('truncates large page counts with an ellipsis', () => {
+    render(
+      <Pagination
+        label="Bookings"
+        onPageChange={jest.fn()}
+        page={1}
+        rangeEnd={5}
+        rangeStart={1}
+        total={50}
+        totalPages={10}
+      />,
+    )
+
+    expect(screen.getByText('…')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Page 10 (Bookings)' }),
+    ).toBeInTheDocument()
   })
 })
