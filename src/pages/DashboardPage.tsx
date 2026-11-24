@@ -460,7 +460,9 @@ export function DashboardPage() {
                               {childName}
                             </span>
                             <span className="mt-0.5 block truncate text-[12px] text-slate-500">
-                              {formatDateTime(booking.requestedAt)}
+                              {booking.scheduledAt
+                                ? formatScheduledDateTime(booking.scheduledAt)
+                                : formatDateTime(booking.requestedAt)}
                             </span>
                           </span>
                         </button>
