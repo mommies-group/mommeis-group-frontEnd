@@ -416,7 +416,7 @@ describe('booking review deep link', () => {
     )
 
     expect(
-      screen.getByRole('heading', { name: 'Review' }),
+      screen.getByRole('heading', { name: 'Booking review' }),
     ).toBeInTheDocument()
     expect(screen.getByText(/jordan@example.test/)).toBeInTheDocument()
     expect(screen.getAllByText('Initial consultation').length).toBeGreaterThan(0)

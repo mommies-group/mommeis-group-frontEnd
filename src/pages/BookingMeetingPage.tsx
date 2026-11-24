@@ -13,12 +13,15 @@ import { Card, CardBody } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Spinner } from '../components/ui/Spinner'
+import { useCompleteBooking } from '../hooks/mutations/bookings/bookings.mutations'
 import { useCurrentUser } from '../hooks/queries/auth/auth.queries'
 import {
   useBookingById,
   useBookingMeeting,
 } from '../hooks/queries/bookings/bookings.queries'
+import { getActionErrorMessage } from '../lib/api-error'
 import { formatScheduledDateTime } from '../lib/format'
+import { notifyError, notifySuccess } from '../lib/toast'
 import { ROUTES, bookingReviewPath } from '../router/routes'
 
 function MeetingLoadingSpinner() {
@@ -30,10 +33,15 @@ export function BookingMeetingPage() {
   const normalizedBookingId = bookingId?.trim() || null
 
   const booking = useBookingById(normalizedBookingId)
-  const isCompleted = booking.data?.status === 'COMPLETED'
+  const completeBooking = useCompleteBooking()
+  const [completedBookingId, setCompletedBookingId] = useState<string | null>(null)
+  const isCompleted =
+    booking.data?.status === 'COMPLETED' ||
+    (Boolean(normalizedBookingId) && completedBookingId === normalizedBookingId)
   const canLoadMeeting =
     Boolean(normalizedBookingId) &&
     !booking.isLoading &&
+    !isCompleted &&
     (!booking.data || booking.data.status === 'CONFIRMED')
   const meeting = useBookingMeeting(normalizedBookingId, canLoadMeeting)
   const currentUser = useCurrentUser()
@@ -42,7 +50,6 @@ export function BookingMeetingPage() {
   const [rejoinKey, setRejoinKey] = useState(0)
   const [notesOpen, setNotesOpen] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
-  const [planCreated, setPlanCreated] = useState(false)
   const externalApiRef = useRef<unknown>(null)
 
   const configOverwrite = useMemo(
@@ -89,10 +96,33 @@ export function BookingMeetingPage() {
   const backPath = normalizedBookingId
     ? bookingReviewPath(normalizedBookingId)
     : ROUTES.bookings
-  const canComplete = booking.data?.status === 'CONFIRMED'
+  const canComplete =
+    Boolean(booking.data) && !isCompleted && booking.data?.status === 'CONFIRMED'
   const pageTitle = booking.data
     ? `Session · ${booking.data.child.firstName} ${booking.data.child.lastName}`
     : 'Session meeting'
+
+  const handleCompleteSession = () => {
+    if (!booking.data || completeBooking.isPending) {
+      return
+    }
+    const targetBookingId = booking.data.id
+
+    completeBooking.mutate(
+      { id: targetBookingId, payload: {} },
+      {
+        onSuccess: () => {
+          setCompletedBookingId(targetBookingId)
+          setNotesOpen(false)
+          setPlanOpen(false)
+          notifySuccess('Session marked as completed.')
+          void booking.refetch()
+        },
+        onError: (error) =>
+          notifyError(error, getActionErrorMessage(error, 'booking.complete')),
+      },
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -110,15 +140,37 @@ export function BookingMeetingPage() {
                 Back to bookings
               </Link>
               {canComplete ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setNotesOpen(true)}
-                >
-                  <Icon name="notes" size={14} />
-                  Complete &amp; add note
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setNotesOpen(true)}
+                  >
+                    <Icon name="notes" size={14} />
+                    Add note
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPlanOpen(true)}
+                  >
+                    <Icon name="file" size={14} />
+                    Create treatment plan
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={completeBooking.isPending}
+                    aria-busy={completeBooking.isPending}
+                    onClick={handleCompleteSession}
+                  >
+                    <Icon name="check" size={14} />
+                    {completeBooking.isPending ? 'Completing…' : 'Complete session'}
+                  </Button>
+                </>
               ) : null}
             </>
           )
@@ -152,7 +204,9 @@ export function BookingMeetingPage() {
               <Badge tone="neutral">{meeting.data.roomName}</Badge>
             ) : null}
             {booking.data ? (
-              <BookingStatusBadge status={booking.data.status} />
+              <BookingStatusBadge
+                status={isCompleted ? 'COMPLETED' : booking.data.status}
+              />
             ) : meeting.data?.status ? (
               <BookingStatusBadge status={meeting.data.status} />
             ) : null}
@@ -180,47 +234,24 @@ export function BookingMeetingPage() {
           </CardBody>
         </Card>
       ) : isCompleted ? (
-        planCreated ? (
-          <Card>
-            <CardBody>
-              <EmptyState
-                icon="check"
-                title="Treatment plan created"
-                description="The session is completed and the treatment plan has been saved."
-                action={
-                  <Link
-                    className={buttonStyles({ variant: 'primary', size: 'sm' })}
-                    to={ROUTES.bookings}
-                  >
-                    <Icon name="arrow-left" size={14} />
-                    Back to bookings
-                  </Link>
-                }
-              />
-            </CardBody>
-          </Card>
-        ) : (
-          <Card>
-            <CardBody>
-              <EmptyState
-                icon="check"
-                title="Session completed"
-                description="Create a treatment plan for this patient to schedule follow-up sessions."
-                action={
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setPlanOpen(true)}
-                  >
-                    <Icon name="file" size={14} />
-                    Create treatment plan
-                  </Button>
-                }
-              />
-            </CardBody>
-          </Card>
-        )
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon="check"
+              title="Session completed"
+              description="This session has been marked as completed. You can return to your bookings list."
+              action={
+                <Link
+                  className={buttonStyles({ variant: 'primary', size: 'sm' })}
+                  to={ROUTES.bookings}
+                >
+                  <Icon name="arrow-left" size={14} />
+                  Back to bookings
+                </Link>
+              }
+            />
+          </CardBody>
+        </Card>
       ) : booking.isLoading || meeting.isLoading ? (
         <Card>
           <CardBody>
@@ -265,7 +296,7 @@ export function BookingMeetingPage() {
             <EmptyState
               icon="video"
               title="You left the meeting"
-              description="Rejoin the session room, add a clinical note to complete this booking, or return to bookings."
+              description="Rejoin the session room, complete the session, or return to bookings."
               action={
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
@@ -285,10 +316,11 @@ export function BookingMeetingPage() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => setNotesOpen(true)}
+                      disabled={completeBooking.isPending}
+                      onClick={handleCompleteSession}
                     >
-                      <Icon name="notes" size={14} />
-                      Complete &amp; add note
+                      <Icon name="check" size={14} />
+                      Complete session
                     </Button>
                   ) : null}
                   <Link
@@ -327,11 +359,7 @@ export function BookingMeetingPage() {
           open
           childId={booking.data.childId}
           bookingId={booking.data.id}
-          completeBookingId={booking.data.id}
           onClose={() => setNotesOpen(false)}
-          onCompleted={() => {
-            void booking.refetch()
-          }}
         />
       ) : null}
 
@@ -342,7 +370,6 @@ export function BookingMeetingPage() {
           childId={booking.data.childId}
           bookingId={booking.data.id}
           onClose={() => setPlanOpen(false)}
-          onSaved={() => setPlanCreated(true)}
         />
       ) : null}
     </div>

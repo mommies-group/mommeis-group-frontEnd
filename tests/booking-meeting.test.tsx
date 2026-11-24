@@ -107,9 +107,11 @@ jest.mock(
   }),
 )
 
+const mockCompleteBooking = jest.fn()
+
 jest.mock('../src/hooks/mutations/bookings/bookings.mutations', () => ({
   useCompleteBooking: () => ({
-    mutate: jest.fn(),
+    mutate: mockCompleteBooking,
     isPending: false,
     reset: jest.fn(),
   }),
@@ -306,7 +308,71 @@ describe('BookingMeetingPage', () => {
     expect(screen.getByTestId('jitsi-meeting')).toBeInTheDocument()
   })
 
-  it('shows only Create treatment plan after completion, then switches to Back to bookings once saved', () => {
+  it('shows Add note, Create treatment plan, and Complete session while the meeting stays live', () => {
+    renderMeetingPage()
+
+    expect(screen.getByTestId('jitsi-meeting')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Create treatment plan' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Complete session' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
+    expect(
+      screen.getByRole('dialog', { name: /Clinical notes/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('jitsi-meeting')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close notes' }))
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Create treatment plan' }),
+    )
+    const modal = screen.getByTestId('treatment-plan-form-modal')
+    expect(modal).toHaveAttribute('data-child-id', 'child-1')
+    expect(modal).toHaveAttribute(
+      'data-booking-id',
+      'cmwse3n23000ymy0pgsgcx9is',
+    )
+    expect(screen.getByTestId('jitsi-meeting')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save treatment plan' }))
+    expect(screen.getByTestId('jitsi-meeting')).toBeInTheDocument()
+  })
+
+  it('hides the meeting and shows Session completed with Back to bookings after completing', () => {
+    mockCompleteBooking.mockImplementation((_args, options) => {
+      options?.onSuccess?.()
+    })
+
+    renderMeetingPage()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complete session' }))
+
+    expect(mockCompleteBooking).toHaveBeenCalledWith(
+      { id: 'cmwse3n23000ymy0pgsgcx9is', payload: {} },
+      expect.any(Object),
+    )
+    expect(screen.queryByTestId('jitsi-meeting')).not.toBeInTheDocument()
+    expect(screen.getByText('Session completed')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Back to bookings' }),
+    ).toHaveAttribute('href', ROUTES.bookings)
+    expect(
+      screen.queryByRole('button', { name: 'Add note' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Create treatment plan' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Complete session' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows Session completed and Back to bookings when the booking is already completed', () => {
     mockUseBookingById.mockReturnValue({
       data: { ...baseBooking, status: 'COMPLETED' },
       isLoading: false,
@@ -336,34 +402,19 @@ describe('BookingMeetingPage', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByTestId('jitsi-meeting')).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('link', { name: /Back to bookings/i }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('link', { name: 'Back to bookings' }),
+    ).toHaveAttribute('href', ROUTES.bookings)
     expect(
       screen.queryByRole('link', { name: /Open in new tab/i }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Complete & add note/i }),
-    ).not.toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Create treatment plan' }),
-    )
-
-    const modal = screen.getByTestId('treatment-plan-form-modal')
-    expect(modal).toHaveAttribute('data-child-id', 'child-1')
-    expect(modal).toHaveAttribute(
-      'data-booking-id',
-      'cmwse3n23000ymy0pgsgcx9is',
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save treatment plan' }))
-
-    expect(screen.getByText('Treatment plan created')).toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Create treatment plan' }),
+      screen.queryByRole('button', { name: /Add note/i }),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Back to bookings' }),
-    ).toHaveAttribute('href', ROUTES.bookings)
+      screen.queryByRole('button', { name: /Create treatment plan/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Complete session/i }),
+    ).not.toBeInTheDocument()
   })
 })

@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ClinicalNoteModal } from '../notes/ClinicalNoteModal'
 import { Icon } from '../icons/Icon'
 import { ApiErrorNotice } from '../ui/ApiErrorNotice'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { Card, CardBody, CardHeader } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Spinner } from '../ui/Spinner'
 import { Field, Input, Textarea } from '../ui/Field'
@@ -27,18 +26,10 @@ import {
   toScheduledIso,
 } from '../../lib/format'
 import type { Booking, ProposalStatus } from '../../types/booking.types'
-import { BookingStatusBadge } from './bookingStatus'
-import { bookingStatusLabels } from './bookingStatusMeta'
 
 const MAX_TIMEOUT_MS = 2_147_483_647
 
 type Decision = 'approve' | 'reject' | 'propose'
-
-const TreatmentPlanFormModal = lazy(() =>
-  import('../treatment-plans/TreatmentPlanFormModal').then((module) => ({
-    default: module.TreatmentPlanFormModal,
-  })),
-)
 
 const proposalLabels: Record<ProposalStatus, string> = {
   PENDING: 'Awaiting parent',
@@ -70,7 +61,6 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
   const [proposedTime, setProposedTime] = useState('')
   const [proposalNote, setProposalNote] = useState('')
   const [notesOpen, setNotesOpen] = useState(false)
-  const [planOpen, setPlanOpen] = useState(false)
 
   const current = bookingDetail.data ?? booking
   const [now, setNow] = useState(() => Date.now())
@@ -109,29 +99,17 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     markNoShow.isPending
 
   if (bookingDetail.isLoading && !current) {
-    return (
-      <Card>
-        <CardHeader title="Review" />
-        <CardBody>
-          <Spinner className="py-10" label="Loading booking details…" />
-        </CardBody>
-      </Card>
-    )
+    return <Spinner className="py-10" label="Loading booking details…" />
   }
 
   if (!current) {
     return (
-      <Card>
-        <CardHeader title="Review" />
-        <CardBody>
-          <EmptyState
-            compact
-            icon="inbox"
-            title="Select a booking"
-            description="Choose a booking to review its details and actions."
-          />
-        </CardBody>
-      </Card>
+      <EmptyState
+        compact
+        icon="inbox"
+        title="Select a booking"
+        description="Choose a booking to review its details and actions."
+      />
     )
   }
 
@@ -148,11 +126,6 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
     approveBooking.reset()
     rejectBooking.reset()
     proposeTime.reset()
-  }
-
-  const openPlan = () => {
-    setNotesOpen(false)
-    setPlanOpen(true)
   }
 
   const handleApprove = () => {
@@ -239,27 +212,16 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader
-          title="Review"
-        action={<BookingStatusBadge status={current.status} />}
-      />
-      <CardBody>
-        <div className="rounded-xl border border-slate-300 bg-slate-50/60 p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">
-                {current.child.firstName} {current.child.lastName}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-slate-500">
-                {current.parent.fullName}
-                {current.parent.email ? ` · ${current.parent.email}` : ''}
-              </p>
-            </div>
-            <Badge tone="neutral">
-              {bookingStatusLabels[current.status]}
-            </Badge>
-          </div>
+      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900">
+            {current.child.firstName} {current.child.lastName}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-slate-500">
+            {current.parent.fullName}
+            {current.parent.email ? ` · ${current.parent.email}` : ''}
+          </p>
+        </div>
 
           <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-300 pt-3">
             <div>
@@ -349,7 +311,8 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           </p>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        {canDecide || canPropose || canComplete || canMeet ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
           {canDecide ? (
             <>
               <Button
@@ -449,13 +412,8 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
               No show
             </Button>
           ) : null}
-          {current.status === 'COMPLETED' ? (
-            <Button variant="soft" size="sm" onClick={openPlan}>
-              <Icon name="file" size={13} />
-              Create treatment plan
-            </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {decision === 'approve' ? (
           <div className="mt-3 flex justify-end gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2.5">
@@ -567,8 +525,6 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
           </div>
         ) : null}
 
-        </CardBody>
-      </Card>
       {notesOpen ? (
         <ClinicalNoteModal
           key={current.id}
@@ -581,18 +537,6 @@ export function BookingReviewPanel({ booking }: BookingReviewPanelProps) {
             void bookingDetail.refetch()
           }}
         />
-      ) : null}
-
-      {planOpen ? (
-        <Suspense fallback={null}>
-          <TreatmentPlanFormModal
-            key={current.id}
-            open
-            childId={current.childId}
-            bookingId={current.id}
-            onClose={() => setPlanOpen(false)}
-          />
-        </Suspense>
       ) : null}
     </>
   )
