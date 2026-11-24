@@ -19,9 +19,17 @@ const toneClasses: Record<BadgeTone, string> = {
   violet: 'border-violet-200 bg-violet-50 text-violet-700',
 }
 
+export type BadgeSize = 'sm' | 'md'
+
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: 'px-2 py-0.5 text-[11px] tracking-normal whitespace-nowrap',
+  md: 'px-2.5 py-0.5 text-[12px] tracking-wide',
+}
+
 type BadgeProps = {
   children: ReactNode
   tone?: BadgeTone
+  size?: BadgeSize
   dot?: boolean
   className?: string
 }
@@ -29,12 +37,13 @@ type BadgeProps = {
 export function Badge({
   children,
   tone = 'neutral',
+  size = 'md',
   dot = false,
   className = '',
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold leading-4 tracking-wide ${toneClasses[tone]} ${className}`.trim()}
+      className={`inline-flex w-fit items-center gap-1 rounded-full border font-semibold leading-4 ${sizeClasses[size]} ${toneClasses[tone]} ${className}`.trim()}
     >
       {dot ? (
         <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />

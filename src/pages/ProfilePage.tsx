@@ -193,7 +193,7 @@ export function ProfilePage() {
       ) : null}
 
       {profile.isLoading ? (
-        <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
           <Card className="p-5">
             <Skeleton className="mx-auto h-24 w-24 rounded-full" />
             <Skeleton className="mx-auto mt-4 h-4 w-40" />
@@ -207,7 +207,7 @@ export function ProfilePage() {
 
       {profile.data ? (
         <div>
-          <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
             <div className="flex flex-col gap-5">
               <Card>
                 <CardBody>
@@ -224,9 +224,9 @@ export function ProfilePage() {
                       {profile.data.specialty}
                     </p>
                     {profile.data.specialties?.length ? (
-                      <div className="mt-2 flex flex-wrap justify-center gap-1">
+                      <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
                         {profile.data.specialties.map((specialty) => (
-                          <Badge key={specialty} tone="info">
+                          <Badge key={specialty} size="sm" tone="info">
                             {specialty}
                           </Badge>
                         ))}
