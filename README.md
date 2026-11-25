@@ -95,7 +95,7 @@ specialist-portal/
 
 | Variable | Description | Example |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Base URL for the MindBloom backend API | `https://mommeis-group-backend-production.up.railway.app` |
+| `VITE_API_BASE_URL` | Base URL for the MindBloom backend API | `https://mommeis-group-backend.com` |
 
 ---
 
