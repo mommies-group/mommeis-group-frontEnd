@@ -281,8 +281,11 @@ describe('Skeleton', () => {
 })
 
 describe('Logo', () => {
-  it('renders the brand name and tagline', () => {
-    render(<Logo tagline="Specialist Portal" />)
+  it('renders the brand name, logo mark, and tagline', () => {
+    const { container } = render(<Logo tagline="Specialist Portal" />)
+    expect(
+      container.querySelector('img[src="/mindbloom-logo.png"]'),
+    ).toBeInTheDocument()
     expect(screen.getByText('MindBloom')).toBeInTheDocument()
     expect(screen.getByText('Specialist Portal')).toBeInTheDocument()
   })
